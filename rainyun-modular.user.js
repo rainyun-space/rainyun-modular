@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    https://github.com/ndxzzy/rainyun-modular
-// @version      1.0.0
+// @version      1.0.1
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -24,13 +24,28 @@
 (function() {
     'use strict';
 
-    // 加载Bootstrap CSS
-    GM_addStyle(GM_getResourceText('css'));
-    GM_addStyle(GM_getResourceText('icons'));
+    // 创建Shadow DOM容器
+    const container = document.createElement('div');
+    const shadowRoot = container.attachShadow({ mode: 'open' });
+    document.body.appendChild(container);
 
-    // 自定义样式
-    GM_addStyle(`
-        .rainyun-modular-container {
+    // 加载Bootstrap CSS（隔离版本）
+    const bootstrapCSS = GM_getResourceText('css');
+    const iconsCSS = GM_getResourceText('icons');
+    
+    // 修改Bootstrap类名前缀
+    const scopedBootstrapCSS = bootstrapCSS.replace(/([^\w\-])(btn|tab|nav|modal|alert|badge|row|col|container|form|table)/g, '$1rym-$2');
+    
+    // 自定义样式（添加前缀）
+    const customCSS = `
+        :host {
+            all: initial; /* 重置所有继承样式 */
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            font-size: 14px;
+            color: #212529;
+        }
+        
+        .rym-container {
             position: fixed;
             right: 20px;
             bottom: 20px;
@@ -43,7 +58,7 @@
             background-color: #fff;
             display: none;
         }
-        .rainyun-modular-header {
+        .rym-header {
             background-color: #0d6efd;
             color: white;
             padding: 12px 15px;
@@ -54,34 +69,34 @@
             justify-content: space-between;
             align-items: center;
         }
-        .rainyun-modular-body {
+        .rym-body {
             padding: 15px;
         }
-        .module-card {
+        .rym-module-card {
             border: 1px solid #dee2e6;
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 12px;
             transition: all 0.2s;
         }
-        .module-card:hover {
+        .rym-module-card:hover {
             box-shadow: 0 0 10px rgba(0,0,0,0.1);
         }
-        .module-card.disabled {
+        .rym-module-card.disabled {
             opacity: 0.6;
             background-color: #f8f9fa;
         }
-        .module-actions {
+        .rym-module-actions {
             display: flex;
             gap: 8px;
             margin-top: 10px;
         }
-        .module-btn {
+        .rym-module-btn {
             flex: 1;
             padding: 5px;
             font-size: 12px;
         }
-        .toggle-btn {
+        .rym-toggle-btn {
             position: fixed;
             right: 20px;
             bottom: 20px;
@@ -98,24 +113,43 @@
             box-shadow: 0 0 10px rgba(0,0,0,0.2);
             border: none;
         }
-        .badge-custom {
+        .rym-badge {
             font-size: 0.75em;
             font-weight: 500;
         }
-        .tab-content {
+        .rym-tab-content {
             padding-top: 15px;
         }
-        .update-available {
+        .rym-update-available {
             border-left: 4px solid #ffc107;
         }
-        .new-module {
+        .rym-new-module {
             border-left: 4px solid #198754;
         }
-    `);
+        
+        /* 重设一些关键Bootstrap样式 */
+        .rym-container * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+        .rym-container a {
+            text-decoration: none;
+        }
+        .rym-container ul {
+            list-style: none;
+        }
+    `;
+
+    // 添加样式到Shadow DOM
+    shadowRoot.appendChild(GM_addElement(shadowRoot, 'style', {
+        textContent: scopedBootstrapCSS + iconsCSS + customCSS
+    }));
 
     // 模块管理器类
     class RainyunModular {
-        constructor() {
+        constructor(shadowRoot) {
+            this.shadowRoot = shadowRoot;
             this.modules = [];
             this.installedModules = [];
             this.activeTab = 'installed';
@@ -136,50 +170,50 @@
         createUI() {
             // 创建容器
             this.container = document.createElement('div');
-            this.container.className = 'rainyun-modular-container';
-            this.container.id = 'rainyunModularContainer';
+            this.container.className = 'rym-container';
+            this.container.id = 'rymModularContainer';
             
             // 创建头部
             const header = document.createElement('div');
-            header.className = 'rainyun-modular-header';
+            header.className = 'rym-header';
             header.innerHTML = `
-                <h5 class="mb-0"><i class="bi bi-puzzle"></i> 雨云模块管理器</h5>
-                <button type="button" class="btn-close btn-close-white" aria-label="Close"></button>
+                <h5 class="rym-mb-0"><i class="bi bi-puzzle"></i> 雨云模块管理器</h5>
+                <button type="button" class="rym-btn-close rym-btn-close-white" aria-label="Close"></button>
             `;
             this.container.appendChild(header);
             
             // 创建主体
             const body = document.createElement('div');
-            body.className = 'rainyun-modular-body';
+            body.className = 'rym-body';
             body.innerHTML = `
-                <ul class="nav nav-tabs" id="modularTabs" role="tablist">
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link active" id="installed-tab" data-bs-toggle="tab" data-bs-target="#installed" type="button" role="tab">已安装</button>
+                <ul class="rym-nav rym-nav-tabs" id="rymModularTabs" role="tablist">
+                    <li class="rym-nav-item" role="presentation">
+                        <button class="rym-nav-link rym-active" id="rym-installed-tab" data-bs-toggle="tab" data-bs-target="#rym-installed" type="button" role="tab">已安装</button>
                     </li>
-                    <li class="nav-item" role="presentation">
-                        <button class="nav-link" id="available-tab" data-bs-toggle="tab" data-bs-target="#available" type="button" role="tab">可用模块</button>
+                    <li class="rym-nav-item" role="presentation">
+                        <button class="rym-nav-link" id="rym-available-tab" data-bs-toggle="tab" data-bs-target="#rym-available" type="button" role="tab">可用模块</button>
                     </li>
                 </ul>
-                <div class="tab-content" id="modularTabContent">
-                    <div class="tab-pane fade show active" id="installed" role="tabpanel" aria-labelledby="installed-tab"></div>
-                    <div class="tab-pane fade" id="available" role="tabpanel" aria-labelledby="available-tab"></div>
+                <div class="rym-tab-content" id="rymModularTabContent">
+                    <div class="rym-tab-pane rym-fade rym-show rym-active" id="rym-installed" role="tabpanel" aria-labelledby="rym-installed-tab"></div>
+                    <div class="rym-tab-pane rym-fade" id="rym-available" role="tabpanel" aria-labelledby="rym-available-tab"></div>
                 </div>
-                <div class="d-flex justify-content-between mt-3">
-                    <button class="btn btn-sm btn-outline-secondary" id="refreshModules"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
-                    <button class="btn btn-sm btn-outline-primary" id="checkUpdates"><i class="bi bi-cloud-arrow-down"></i> 检查更新</button>
+                <div class="rym-d-flex rym-justify-content-between rym-mt-3">
+                    <button class="rym-btn rym-btn-sm rym-btn-outline-secondary" id="rym-refreshModules"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
+                    <button class="rym-btn rym-btn-sm rym-btn-outline-primary" id="rym-checkUpdates"><i class="bi bi-cloud-arrow-down"></i> 检查更新</button>
                 </div>
             `;
             this.container.appendChild(body);
             
             // 创建切换按钮
             this.toggleBtn = document.createElement('button');
-            this.toggleBtn.className = 'toggle-btn';
+            this.toggleBtn.className = 'rym-toggle-btn';
             this.toggleBtn.innerHTML = '<i class="bi bi-puzzle" style="font-size: 1.5rem;"></i>';
             this.toggleBtn.title = '雨云模块管理器';
             
-            // 添加到文档
-            document.body.appendChild(this.container);
-            document.body.appendChild(this.toggleBtn);
+            // 添加到Shadow DOM
+            this.shadowRoot.appendChild(this.container);
+            this.shadowRoot.appendChild(this.toggleBtn);
         }
 
         setupEventListeners() {
@@ -253,7 +287,7 @@
 
         async fetchModuleList() {
             try {
-                const response = await this.fetchUrl('https://raw.githubusercontent.com/yourname/rainyun-modular/main/modules/module-list.json');
+                const response = await this.fetchUrl('https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/module-list.json');
                 this.modules = JSON.parse(response);
                 
                 // 检查是否有新模块或更新
@@ -435,7 +469,7 @@
             
             try {
                 // 获取模块脚本
-                const scriptUrl = `https://raw.githubusercontent.com/yourname/rainyun-modular/main/modules/${module.path}`;
+                const scriptUrl = `https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/${module.path}`;
                 const scriptContent = await this.fetchUrl(scriptUrl);
                 
                 // 保存模块信息
@@ -480,7 +514,7 @@
             
             try {
                 // 获取模块脚本
-                const scriptUrl = `https://raw.githubusercontent.com/yourname/rainyun-modular/main/modules/${module.path}`;
+                const scriptUrl = `https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/${module.path}`;
                 const scriptContent = await this.fetchUrl(scriptUrl);
                 
                 // 更新模块信息
