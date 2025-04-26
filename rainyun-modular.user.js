@@ -141,10 +141,10 @@
         }
     `;
 
-    // 添加样式到Shadow DOM
-    shadowRoot.appendChild(GM_addElement(shadowRoot, 'style', {
-        textContent: scopedBootstrapCSS + iconsCSS + customCSS
-    }));
+    // 用原生方式创建样式元素
+    const styleElement = document.createElement('style');
+    styleElement.textContent = scopedBootstrapCSS + iconsCSS + customCSS;
+    shadowRoot.appendChild(styleElement);
 
     // 模块管理器类
     class RainyunModular {
@@ -211,9 +211,12 @@
             this.toggleBtn.innerHTML = '<i class="bi bi-puzzle" style="font-size: 1.5rem;"></i>';
             this.toggleBtn.title = '雨云模块管理器';
             
-            // 添加到Shadow DOM
+            // 添加到 Shadow DOM
             this.shadowRoot.appendChild(this.container);
             this.shadowRoot.appendChild(this.toggleBtn);
+            
+            // 现在可以安全地设置事件监听器，因为元素已经在DOM中
+            this.setupEventListeners();
         }
 
         setupEventListeners() {
@@ -223,12 +226,12 @@
             });
             
             // 关闭按钮点击事件
-            this.container.querySelector('.btn-close').addEventListener('click', () => {
+            this.shadowRoot.querySelector('.rym-btn-close').addEventListener('click', () => {
                 this.container.style.display = 'none';
             });
             
             // 刷新按钮点击事件
-            document.getElementById('refreshModules').addEventListener('click', async () => {
+            this.shadowRoot.querySelector('#rym-refreshModules').addEventListener('click', async () => {
                 await this.fetchModuleList();
                 this.renderModules();
                 Swal.fire({
@@ -241,7 +244,7 @@
             });
             
             // 检查更新按钮点击事件
-            document.getElementById('checkUpdates').addEventListener('click', async () => {
+            this.shadowRoot.querySelector('#rym-checkUpdates').addEventListener('click', async () => {
                 await this.checkForUpdates();
             });
             
@@ -253,21 +256,24 @@
             });
             
             // 拖拽功能
-            const header = this.container.querySelector('.rainyun-modular-header');
+            const header = this.shadowRoot.querySelector('.rym-header');
+            
+            // 拖拽逻辑（使用 transform 方案）
             header.addEventListener('mousedown', (e) => {
                 this.dragging = true;
                 const rect = this.container.getBoundingClientRect();
-                this.offsetX = e.clientX - rect.left;
-                this.offsetY = e.clientY - rect.top;
+                this.initialX = e.clientX - rect.left;
+                this.initialY = e.clientY - rect.top;
                 this.container.style.cursor = 'grabbing';
             });
-            
+
             document.addEventListener('mousemove', (e) => {
                 if (!this.dragging) return;
-                this.container.style.left = (e.clientX - this.offsetX) + 'px';
-                this.container.style.top = (e.clientY - this.offsetY) + 'px';
+                const x = e.clientX - this.initialX;
+                const y = e.clientY - this.initialY;
+                this.container.style.transform = `translate(${x}px, ${y}px)`;
             });
-            
+
             document.addEventListener('mouseup', () => {
                 this.dragging = false;
                 this.container.style.cursor = '';
@@ -346,8 +352,8 @@
         }
 
         renderModules() {
-            const installedTab = document.getElementById('installed');
-            const availableTab = document.getElementById('available');
+            const installedTab = this.shadowRoot.querySelector('#rym-installed');
+            const availableTab = this.shadowRoot.querySelector('#rym-available');
             
             installedTab.innerHTML = '';
             availableTab.innerHTML = '';
@@ -722,5 +728,5 @@
     }
 
     // 初始化管理器
-    new RainyunModular();
+    new RainyunModular(shadowRoot);  // Pass the shadowRoot here
 })();
