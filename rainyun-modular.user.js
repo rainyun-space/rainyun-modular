@@ -18,7 +18,7 @@
 // @require      https://cdn.jsdelivr.net/npm/sweetalert2@11
 // @resource     css https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css
 // @resource     icons https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css
-// @icon         https://console.rainyun.com/favicon.ico
+// @icon         https://app.rainyun.com/favicon.ico
 // ==/UserScript==
 
 (function() {

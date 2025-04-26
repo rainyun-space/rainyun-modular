@@ -1,13 +1,13 @@
 // ==UserScript==
 // @name         雨云MCSM新标签页打开
-// @namespace    https://github.com/yourname/rainyun-modular
+// @namespace    https://github.com/ndxzzy/rainyun-modular
 // @version      0.1
 // @description  将MCSM一键登录改为新标签页打开
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
 // @grant        none
-// @supportURL   https://github.com/yourname/rainyun-modular/issues
-// @updateURL    https://raw.githubusercontent.com/yourname/rainyun-modular/main/modules/mcsm-redirect/mcsm-redirect.user.js
+// @supportURL   https://github.com/ndxzzy/rainyun-modular/issues
+// @updateURL    https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/mcsm-redirect/mcsm-redirect.user.js
 // ==/UserScript==
 
 (function() {

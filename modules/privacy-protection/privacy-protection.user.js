@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name         雨云截图隐私保护
-// @namespace    https://github.com/yourname/rainyun-modular
+// @namespace    https://github.com/ndxzzy/rainyun-modular
 // @version      0.16
 // @description  给包含特定隐私内容的元素添加模糊效果，并提供开关按钮控制
 // @author       ndxzzy, ChatGPT, DeepSeek
@@ -8,10 +8,10 @@
 // @grant        GM_registerMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
-// @resource     eyeIcon https://raw.githubusercontent.com/yourname/rainyun-modular/main/resources/eye-icon.svg
-// @resource     slashedEyeIcon https://raw.githubusercontent.com/yourname/rainyun-modular/main/resources/slashed-eye-icon.svg
-// @supportURL   https://github.com/yourname/rainyun-modular/issues
-// @updateURL    https://raw.githubusercontent.com/yourname/rainyun-modular/main/modules/privacy-protection/privacy-protection.user.js
+// @resource     eyeIcon https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/resources/eye-icon.svg
+// @resource     slashedEyeIcon https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/resources/slashed-eye-icon.svg
+// @supportURL   https://github.com/ndxzzy/rainyun-modular/issues
+// @updateURL    https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/privacy-protection/privacy-protection.user.js
 // ==/UserScript==
 
 (function() {
