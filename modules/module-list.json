@@ -1,0 +1,20 @@
+[
+    {
+        "id": "privacy-protection",
+        "name": "隐私保护",
+        "version": "0.16",
+        "description": "保护截图中的敏感信息，自动模糊处理隐私内容",
+        "author": "ndxzzy, ChatGPT",
+        "path": "privacy-protection/privacy-protection.user.js",
+        "details": "此模块会自动模糊处理页面中的敏感信息，如IP地址、API密钥等，保护您的隐私安全。"
+    },
+    {
+        "id": "mcsm-redirect",
+        "name": "MCSM新标签页打开",
+        "version": "0.1",
+        "description": "将MCSM一键登录改为新标签页打开",
+        "author": "ndxzzy",
+        "path": "mcsm-redirect/mcsm-redirect.user.js",
+        "details": "此模块修改MCSM一键登录行为，强制在新标签页中打开而不是隐私窗口。"
+    }
+]
