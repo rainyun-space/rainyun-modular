@@ -1,732 +1,539 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
-// @namespace    https://github.com/ndxzzy/rainyun-modular
+// @namespace    http://tampermonkey.net/
 // @version      1.0.1
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
-// @author       ndxzzy, DeepSeek
+// @author       ndxzzy
 // @match        https://app.rainyun.com/*
+// @grant        GM_registerMenuCommand
+// @grant        GM_unregisterMenuCommand
 // @grant        GM_getValue
 // @grant        GM_setValue
 // @grant        GM_deleteValue
 // @grant        GM_listValues
+// @grant        GM_download
 // @grant        GM_xmlhttpRequest
-// @grant        GM_addStyle
-// @grant        GM_getResourceText
-// @grant        GM_addElement
-// @connect      github.com
-// @connect      raw.githubusercontent.com
-// @require      https://cdn.jsdelivr.net/npm/sweetalert2@11
-// @resource     css https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css
-// @resource     icons https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css
-// @icon         https://app.rainyun.com/favicon.ico
+// @grant        unsafeWindow
 // ==/UserScript==
 
 (function() {
     'use strict';
-
-    // 创建Shadow DOM容器
-    const container = document.createElement('div');
-    const shadowRoot = container.attachShadow({ mode: 'open' });
-    document.body.appendChild(container);
-
-    // 加载Bootstrap CSS（隔离版本）
-    const bootstrapCSS = GM_getResourceText('css');
-    const iconsCSS = GM_getResourceText('icons');
     
-    // 修改Bootstrap类名前缀
-    const scopedBootstrapCSS = bootstrapCSS.replace(/([^\w\-])(btn|tab|nav|modal|alert|badge|row|col|container|form|table)/g, '$1rym-$2');
+    // 脚本配置
+    const CONFIG = {
+        moduleListUrl: 'https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/module-list.json',
+        baseUrl: 'https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/',
+        updateCheckInterval: 24 * 60 * 60 * 1000 // 24小时
+    };
     
-    // 自定义样式（添加前缀）
-    const customCSS = `
-        :host {
-            all: initial; /* 重置所有继承样式 */
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-            font-size: 14px;
-            color: #212529;
+    // 状态管理
+    const state = {
+        menuCommands: [],
+        modules: {},
+        installedModules: {}
+    };
+    
+    // DOM元素
+    let managerUI = null;
+    
+    // 初始化
+    async function init() {
+        loadInstalledModules();
+        await checkForUpdates();
+        registerMenuCommands();
+    }
+    
+    // 加载已安装模块
+    function loadInstalledModules() {
+        const modules = GM_listValues().filter(key => key.startsWith('module_'));
+        state.installedModules = modules.reduce((acc, key) => {
+            const moduleId = key.replace('module_', '');
+            acc[moduleId] = JSON.parse(GM_getValue(key));
+            return acc;
+        }, {});
+    }
+    
+    // 注册菜单命令
+    function registerMenuCommands() {
+        // 注销旧命令
+        state.menuCommands.forEach(cmd => GM_unregisterMenuCommand(cmd));
+        state.menuCommands = [];
+        
+        // 注册新命令
+        state.menuCommands.push(GM_registerMenuCommand('打开脚本管理器', openManager));
+        state.menuCommands.push(GM_registerMenuCommand('检查脚本更新', checkForUpdates));
+        
+        // 为已安装模块添加快速开关
+        Object.keys(state.installedModules).forEach(moduleId => {
+            const module = state.installedModules[moduleId];
+            const command = GM_registerMenuCommand(
+                `${module.enabled ? '✅' : '❌'} ${module.name}`, 
+                () => toggleModule(moduleId)
+            );
+            state.menuCommands.push(command);
+        });
+    }
+    
+    // 打开管理器界面
+    function openManager() {
+        if (managerUI) {
+            managerUI.remove();
         }
         
-        .rym-container {
+        // 创建UI
+        managerUI = document.createElement('div');
+        managerUI.id = 'rainyun-script-manager';
+        managerUI.style.cssText = `
             position: fixed;
-            right: 20px;
-            bottom: 20px;
-            z-index: 9999;
-            width: 350px;
+            top: 50px;
+            right: 50px;
+            width: 600px;
             max-height: 80vh;
-            overflow-y: auto;
-            box-shadow: 0 0 20px rgba(0,0,0,0.2);
-            border-radius: 10px;
-            background-color: #fff;
-            display: none;
-        }
-        .rym-header {
-            background-color: #0d6efd;
-            color: white;
-            padding: 12px 15px;
-            border-top-left-radius: 10px;
-            border-top-right-radius: 10px;
-            cursor: move;
+            background: white;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+            z-index: 9999;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        `;
+        
+        // 头部
+        const header = document.createElement('div');
+        header.style.cssText = `
+            padding: 16px;
+            background: #f8f9fa;
+            border-bottom: 1px solid #ddd;
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-        .rym-body {
-            padding: 15px;
-        }
-        .rym-module-card {
-            border: 1px solid #dee2e6;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 12px;
-            transition: all 0.2s;
-        }
-        .rym-module-card:hover {
-            box-shadow: 0 0 10px rgba(0,0,0,0.1);
-        }
-        .rym-module-card.disabled {
-            opacity: 0.6;
-            background-color: #f8f9fa;
-        }
-        .rym-module-actions {
-            display: flex;
-            gap: 8px;
-            margin-top: 10px;
-        }
-        .rym-module-btn {
-            flex: 1;
-            padding: 5px;
-            font-size: 12px;
-        }
-        .rym-toggle-btn {
-            position: fixed;
-            right: 20px;
-            bottom: 20px;
-            z-index: 9998;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            background-color: #0d6efd;
+        `;
+        
+        const title = document.createElement('h3');
+        title.textContent = 'Rainyun 脚本管理器';
+        title.style.margin = '0';
+        
+        const closeBtn = document.createElement('button');
+        closeBtn.textContent = '关闭';
+        closeBtn.style.cssText = `
+            background: #f44336;
             color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            box-shadow: 0 0 10px rgba(0,0,0,0.2);
             border: none;
-        }
-        .rym-badge {
-            font-size: 0.75em;
-            font-weight: 500;
-        }
-        .rym-tab-content {
-            padding-top: 15px;
-        }
-        .rym-update-available {
-            border-left: 4px solid #ffc107;
-        }
-        .rym-new-module {
-            border-left: 4px solid #198754;
+            padding: 8px 16px;
+            border-radius: 4px;
+            cursor: pointer;
+        `;
+        closeBtn.addEventListener('click', () => managerUI.remove());
+        
+        header.appendChild(title);
+        header.appendChild(closeBtn);
+        
+        // 主体内容
+        const content = document.createElement('div');
+        content.style.cssText = `
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        `;
+        
+        // 模块列表
+        const moduleList = document.createElement('div');
+        content.appendChild(moduleList);
+        
+        // 加载模块列表
+        loadModuleList().then(modules => {
+            moduleList.innerHTML = '';
+            
+            if (!modules || modules.length === 0) {
+                moduleList.innerHTML = '<p>未找到可用模块</p>';
+                return;
+            }
+            
+            modules.forEach(module => {
+                const moduleCard = createModuleCard(module);
+                moduleList.appendChild(moduleCard);
+            });
+        }).catch(err => {
+            moduleList.innerHTML = `<p>加载模块列表失败: ${err.message}</p>`;
+        });
+        
+        managerUI.appendChild(header);
+        managerUI.appendChild(content);
+        document.body.appendChild(managerUI);
+    }
+    
+    // 创建模块卡片
+    function createModuleCard(module) {
+        const isInstalled = state.installedModules[module.id];
+        const isEnabled = isInstalled ? isInstalled.enabled : false;
+        
+        const card = document.createElement('div');
+        card.style.cssText = `
+            border: 1px solid #eee;
+            border-radius: 8px;
+            padding: 16px;
+            margin-bottom: 16px;
+            transition: box-shadow 0.3s;
+        `;
+        
+        card.onmouseover = () => {
+            card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
+        };
+        
+        card.onmouseout = () => {
+            card.style.boxShadow = 'none';
+        };
+        
+        const header = document.createElement('div');
+        header.style.cssText = `
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        `;
+        
+        const title = document.createElement('h4');
+        title.textContent = module.name;
+        title.style.margin = '0';
+        
+        const status = document.createElement('span');
+        status.textContent = isInstalled 
+            ? (isEnabled ? '已启用' : '已禁用') 
+            : '未安装';
+        status.style.cssText = `
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+        `;
+        
+        if (isInstalled) {
+            status.style.backgroundColor = isEnabled ? '#4CAF5033' : '#F4433633';
+            status.style.color = isEnabled ? '#4CAF50' : '#F44336';
+        } else {
+            status.style.backgroundColor = '#2196F333';
+            status.style.color = '#2196F3';
         }
         
-        /* 重设一些关键Bootstrap样式 */
-        .rym-container * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
+        header.appendChild(title);
+        header.appendChild(status);
+        
+        const description = document.createElement('p');
+        description.textContent = module.description;
+        description.style.cssText = `
+            margin: 0 0 12px 0;
+            color: #666;
+            font-size: 14px;
+        `;
+        
+        const actions = document.createElement('div');
+        actions.style.cssText = `
+            display: flex;
+            gap: 8px;
+        `;
+        
+        // 安装/卸载按钮
+        const installBtn = document.createElement('button');
+        installBtn.textContent = isInstalled ? '卸载' : '安装';
+        installBtn.style.cssText = `
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        `;
+        
+        if (isInstalled) {
+            installBtn.style.backgroundColor = '#F44336';
+            installBtn.style.color = 'white';
+            installBtn.onclick = () => uninstallModule(module.id);
+        } else {
+            installBtn.style.backgroundColor = '#4CAF50';
+            installBtn.style.color = 'white';
+            installBtn.onclick = () => installModule(module);
         }
-        .rym-container a {
-            text-decoration: none;
+        
+        // 启用/禁用按钮
+        const toggleBtn = document.createElement('button');
+        toggleBtn.textContent = isInstalled ? (isEnabled ? '禁用' : '启用') : '不可用';
+        toggleBtn.style.cssText = `
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+        `;
+        
+        if (isInstalled) {
+            toggleBtn.style.backgroundColor = isEnabled ? '#F44336' : '#4CAF50';
+            toggleBtn.style.color = 'white';
+            toggleBtn.onclick = () => toggleModule(module.id);
+        } else {
+            toggleBtn.style.backgroundColor = '#ccc';
+            toggleBtn.style.color = '#666';
+            toggleBtn.disabled = true;
         }
-        .rym-container ul {
-            list-style: none;
+        
+        // 检查更新按钮
+        const updateBtn = document.createElement('button');
+        updateBtn.textContent = '检查更新';
+        updateBtn.style.cssText = `
+            flex: 1;
+            padding: 8px 16px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.2s;
+            background-color: #2196F3;
+            color: white;
+        `;
+        
+        updateBtn.onclick = () => checkModuleUpdate(module);
+        
+        actions.appendChild(installBtn);
+        actions.appendChild(toggleBtn);
+        if (isInstalled) {
+            actions.appendChild(updateBtn);
         }
-    `;
-
-    // 用原生方式创建样式元素
-    const styleElement = document.createElement('style');
-    styleElement.textContent = scopedBootstrapCSS + iconsCSS + customCSS;
-    shadowRoot.appendChild(styleElement);
-
-    // 模块管理器类
-    class RainyunModular {
-        constructor(shadowRoot) {
-            this.shadowRoot = shadowRoot;
-            this.modules = [];
-            this.installedModules = [];
-            this.activeTab = 'installed';
-            this.dragging = false;
-            this.offsetX = 0;
-            this.offsetY = 0;
-            this.init();
-        }
-
-        async init() {
-            this.createUI();
-            this.loadInstalledModules();
-            await this.fetchModuleList();
-            this.renderModules();
-            this.setupEventListeners();
-        }
-
-        createUI() {
-            // 创建容器
-            this.container = document.createElement('div');
-            this.container.className = 'rym-container';
-            this.container.id = 'rymModularContainer';
-            
-            // 创建头部
-            const header = document.createElement('div');
-            header.className = 'rym-header';
-            header.innerHTML = `
-                <h5 class="rym-mb-0"><i class="bi bi-puzzle"></i> 雨云模块管理器</h5>
-                <button type="button" class="rym-btn-close rym-btn-close-white" aria-label="Close"></button>
-            `;
-            this.container.appendChild(header);
-            
-            // 创建主体
-            const body = document.createElement('div');
-            body.className = 'rym-body';
-            body.innerHTML = `
-                <ul class="rym-nav rym-nav-tabs" id="rymModularTabs" role="tablist">
-                    <li class="rym-nav-item" role="presentation">
-                        <button class="rym-nav-link rym-active" id="rym-installed-tab" data-bs-toggle="tab" data-bs-target="#rym-installed" type="button" role="tab">已安装</button>
-                    </li>
-                    <li class="rym-nav-item" role="presentation">
-                        <button class="rym-nav-link" id="rym-available-tab" data-bs-toggle="tab" data-bs-target="#rym-available" type="button" role="tab">可用模块</button>
-                    </li>
-                </ul>
-                <div class="rym-tab-content" id="rymModularTabContent">
-                    <div class="rym-tab-pane rym-fade rym-show rym-active" id="rym-installed" role="tabpanel" aria-labelledby="rym-installed-tab"></div>
-                    <div class="rym-tab-pane rym-fade" id="rym-available" role="tabpanel" aria-labelledby="rym-available-tab"></div>
-                </div>
-                <div class="rym-d-flex rym-justify-content-between rym-mt-3">
-                    <button class="rym-btn rym-btn-sm rym-btn-outline-secondary" id="rym-refreshModules"><i class="bi bi-arrow-clockwise"></i> 刷新</button>
-                    <button class="rym-btn rym-btn-sm rym-btn-outline-primary" id="rym-checkUpdates"><i class="bi bi-cloud-arrow-down"></i> 检查更新</button>
-                </div>
-            `;
-            this.container.appendChild(body);
-            
-            // 创建切换按钮
-            this.toggleBtn = document.createElement('button');
-            this.toggleBtn.className = 'rym-toggle-btn';
-            this.toggleBtn.innerHTML = '<i class="bi bi-puzzle" style="font-size: 1.5rem;"></i>';
-            this.toggleBtn.title = '雨云模块管理器';
-            
-            // 添加到 Shadow DOM
-            this.shadowRoot.appendChild(this.container);
-            this.shadowRoot.appendChild(this.toggleBtn);
-            
-            // 现在可以安全地设置事件监听器，因为元素已经在DOM中
-            this.setupEventListeners();
-        }
-
-        setupEventListeners() {
-            // 切换按钮点击事件
-            this.toggleBtn.addEventListener('click', () => {
-                this.container.style.display = this.container.style.display === 'block' ? 'none' : 'block';
-            });
-            
-            // 关闭按钮点击事件
-            this.shadowRoot.querySelector('.rym-btn-close').addEventListener('click', () => {
-                this.container.style.display = 'none';
-            });
-            
-            // 刷新按钮点击事件
-            this.shadowRoot.querySelector('#rym-refreshModules').addEventListener('click', async () => {
-                await this.fetchModuleList();
-                this.renderModules();
-                Swal.fire({
-                    title: '刷新成功',
-                    text: '模块列表已刷新',
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            });
-            
-            // 检查更新按钮点击事件
-            this.shadowRoot.querySelector('#rym-checkUpdates').addEventListener('click', async () => {
-                await this.checkForUpdates();
-            });
-            
-            // 标签页切换事件
-            document.querySelectorAll('#modularTabs button').forEach(tab => {
-                tab.addEventListener('click', (e) => {
-                    this.activeTab = e.target.getAttribute('data-bs-target').replace('#', '');
-                });
-            });
-            
-            // 拖拽功能
-            const header = this.shadowRoot.querySelector('.rym-header');
-            
-            // 拖拽逻辑（使用 transform 方案）
-            header.addEventListener('mousedown', (e) => {
-                this.dragging = true;
-                const rect = this.container.getBoundingClientRect();
-                this.initialX = e.clientX - rect.left;
-                this.initialY = e.clientY - rect.top;
-                this.container.style.cursor = 'grabbing';
-            });
-
-            document.addEventListener('mousemove', (e) => {
-                if (!this.dragging) return;
-                const x = e.clientX - this.initialX;
-                const y = e.clientY - this.initialY;
-                this.container.style.transform = `translate(${x}px, ${y}px)`;
-            });
-
-            document.addEventListener('mouseup', () => {
-                this.dragging = false;
-                this.container.style.cursor = '';
-            });
-        }
-
-        loadInstalledModules() {
-            const installed = GM_listValues().filter(v => v.startsWith('module_'));
-            this.installedModules = installed.map(key => {
-                const moduleData = GM_getValue(key);
-                return {
-                    id: key.replace('module_', ''),
-                    ...moduleData
-                };
-            });
-        }
-
-        async fetchModuleList() {
-            try {
-                const response = await this.fetchUrl('https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/module-list.json');
-                this.modules = JSON.parse(response);
-                
-                // 检查是否有新模块或更新
-                this.modules.forEach(module => {
-                    const installed = this.installedModules.find(m => m.id === module.id);
-                    if (installed) {
-                        module.installed = true;
-                        module.enabled = installed.enabled;
-                        if (this.compareVersions(module.version, installed.version) > 0) {
-                            module.updateAvailable = true;
-                        }
-                    } else {
-                        module.installed = false;
-                    }
-                });
-            } catch (error) {
-                console.error('Failed to fetch module list:', error);
-                Swal.fire({
-                    title: '错误',
-                    text: '无法获取模块列表，请检查网络连接',
-                    icon: 'error'
-                });
+        
+        card.appendChild(header);
+        card.appendChild(description);
+        card.appendChild(actions);
+        
+        return card;
+    }
+    
+    // 加载模块列表
+    async function loadModuleList() {
+        try {
+            const response = await fetch(CONFIG.moduleListUrl);
+            if (!response.ok) {
+                throw new Error(`HTTP错误，状态码: ${response.status}`);
             }
-        }
-
-        async fetchUrl(url) {
-            return new Promise((resolve, reject) => {
-                GM_xmlhttpRequest({
-                    method: 'GET',
-                    url: url,
-                    onload: (response) => {
-                        if (response.status >= 200 && response.status < 300) {
-                            resolve(response.responseText);
-                        } else {
-                            reject(new Error(`HTTP ${response.status}: ${response.statusText}`));
-                        }
-                    },
-                    onerror: (error) => {
-                        reject(error);
-                    }
-                });
-            });
-        }
-
-        compareVersions(v1, v2) {
-            const parts1 = v1.split('.').map(Number);
-            const parts2 = v2.split('.').map(Number);
-            
-            for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
-                const part1 = parts1[i] || 0;
-                const part2 = parts2[i] || 0;
-                if (part1 > part2) return 1;
-                if (part1 < part2) return -1;
-            }
-            return 0;
-        }
-
-        renderModules() {
-            const installedTab = this.shadowRoot.querySelector('#rym-installed');
-            const availableTab = this.shadowRoot.querySelector('#rym-available');
-            
-            installedTab.innerHTML = '';
-            availableTab.innerHTML = '';
-            
-            if (this.installedModules.length === 0) {
-                installedTab.innerHTML = '<div class="text-center py-3 text-muted">没有安装任何模块</div>';
-            } else {
-                this.installedModules.forEach(module => {
-                    const moduleInfo = this.modules.find(m => m.id === module.id) || module;
-                    installedTab.appendChild(this.createModuleCard(moduleInfo, true));
-                });
-            }
-            
-            const availableModules = this.modules.filter(m => !m.installed);
-            if (availableModules.length === 0) {
-                availableTab.innerHTML = '<div class="text-center py-3 text-muted">没有可用的新模块</div>';
-            } else {
-                availableModules.forEach(module => {
-                    availableTab.appendChild(this.createModuleCard(module, false));
-                });
-            }
-        }
-
-        createModuleCard(module, isInstalled) {
-            const card = document.createElement('div');
-            card.className = `module-card ${!module.enabled && isInstalled ? 'disabled' : ''} ${module.updateAvailable ? 'update-available' : ''} ${!isInstalled ? 'new-module' : ''}`;
-            
-            // 创建卡片内容
-            let html = `
-                <div class="d-flex justify-content-between align-items-start">
-                    <h6 class="mb-1">${module.name} <span class="badge bg-primary badge-custom">v${module.version}</span></h6>
-                    ${module.updateAvailable ? '<span class="badge bg-warning text-dark badge-custom">可更新</span>' : ''}
-                </div>
-                <p class="small text-muted mb-2">${module.description}</p>
-            `;
-            
-            // 添加作者信息
-            if (module.author) {
-                html += `<p class="small mb-1"><i class="bi bi-person"></i> ${module.author}</p>`;
-            }
-            
-            // 添加操作按钮
-            const actions = document.createElement('div');
-            actions.className = 'module-actions';
-            
-            if (isInstalled) {
-                // 已安装模块的操作按钮
-                actions.innerHTML = `
-                    <button class="btn btn-sm ${module.enabled ? 'btn-warning' : 'btn-success'} module-btn toggle-module" data-id="${module.id}">
-                        <i class="bi ${module.enabled ? 'bi-pause' : 'bi-play'}"></i> ${module.enabled ? '禁用' : '启用'}
-                    </button>
-                    <button class="btn btn-sm btn-danger module-btn uninstall-module" data-id="${module.id}">
-                        <i class="bi bi-trash"></i> 卸载
-                    </button>
-                    ${module.updateAvailable ? `
-                    <button class="btn btn-sm btn-info module-btn update-module" data-id="${module.id}">
-                        <i class="bi bi-cloud-arrow-down"></i> 更新
-                    </button>
-                    ` : ''}
-                `;
-            } else {
-                // 未安装模块的操作按钮
-                actions.innerHTML = `
-                    <button class="btn btn-sm btn-success module-btn install-module" data-id="${module.id}">
-                        <i class="bi bi-download"></i> 安装
-                    </button>
-                    <button class="btn btn-sm btn-outline-secondary module-btn view-details" data-id="${module.id}">
-                        <i class="bi bi-info-circle"></i> 详情
-                    </button>
-                `;
-            }
-            
-            card.innerHTML = html;
-            card.appendChild(actions);
-            
-            // 添加事件监听器
-            if (isInstalled) {
-                card.querySelector('.toggle-module').addEventListener('click', (e) => this.toggleModule(e.target.dataset.id));
-                card.querySelector('.uninstall-module').addEventListener('click', (e) => this.uninstallModule(e.target.dataset.id));
-                if (module.updateAvailable) {
-                    card.querySelector('.update-module').addEventListener('click', (e) => this.updateModule(e.target.dataset.id));
-                }
-            } else {
-                card.querySelector('.install-module').addEventListener('click', (e) => this.installModule(e.target.dataset.id));
-                card.querySelector('.view-details').addEventListener('click', (e) => this.showModuleDetails(e.target.dataset.id));
-            }
-            
-            return card;
-        }
-
-        async toggleModule(moduleId) {
-            const module = this.installedModules.find(m => m.id === moduleId);
-            if (!module) return;
-            
-            module.enabled = !module.enabled;
-            GM_setValue(`module_${moduleId}`, module);
-            
-            // 重新加载模块脚本
-            if (module.enabled) {
-                await this.loadModuleScript(moduleId);
-            } else {
-                this.unloadModuleScript(moduleId);
-            }
-            
-            this.loadInstalledModules();
-            this.renderModules();
-            
-            Swal.fire({
-                title: module.enabled ? '模块已启用' : '模块已禁用',
-                icon: 'success',
-                timer: 1500,
-                showConfirmButton: false
-            });
-        }
-
-        async installModule(moduleId) {
-            const module = this.modules.find(m => m.id === moduleId);
-            if (!module) return;
-            
-            try {
-                // 获取模块脚本
-                const scriptUrl = `https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/${module.path}`;
-                const scriptContent = await this.fetchUrl(scriptUrl);
-                
-                // 保存模块信息
-                const moduleData = {
-                    id: module.id,
-                    name: module.name,
-                    version: module.version,
-                    description: module.description,
-                    author: module.author,
-                    enabled: true,
-                    script: scriptContent
-                };
-                
-                GM_setValue(`module_${moduleId}`, moduleData);
-                
-                // 加载模块脚本
-                await this.loadModuleScript(moduleId);
-                
-                this.loadInstalledModules();
-                this.renderModules();
-                
-                Swal.fire({
-                    title: '安装成功',
-                    text: `${module.name} 已成功安装并启用`,
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } catch (error) {
-                console.error('Failed to install module:', error);
-                Swal.fire({
-                    title: '安装失败',
-                    text: '无法安装模块，请检查网络连接',
-                    icon: 'error'
-                });
-            }
-        }
-
-        async updateModule(moduleId) {
-            const module = this.modules.find(m => m.id === moduleId);
-            if (!module) return;
-            
-            try {
-                // 获取模块脚本
-                const scriptUrl = `https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/${module.path}`;
-                const scriptContent = await this.fetchUrl(scriptUrl);
-                
-                // 更新模块信息
-                const moduleData = {
-                    id: module.id,
-                    name: module.name,
-                    version: module.version,
-                    description: module.description,
-                    author: module.author,
-                    enabled: true,
-                    script: scriptContent
-                };
-                
-                // 卸载旧版本
-                this.unloadModuleScript(moduleId);
-                
-                // 保存新版本
-                GM_setValue(`module_${moduleId}`, moduleData);
-                
-                // 加载新版本
-                await this.loadModuleScript(moduleId);
-                
-                this.loadInstalledModules();
-                await this.fetchModuleList();
-                this.renderModules();
-                
-                Swal.fire({
-                    title: '更新成功',
-                    text: `${module.name} 已更新到 v${module.version}`,
-                    icon: 'success',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } catch (error) {
-                console.error('Failed to update module:', error);
-                Swal.fire({
-                    title: '更新失败',
-                    text: '无法更新模块，请检查网络连接',
-                    icon: 'error'
-                });
-            }
-        }
-
-        uninstallModule(moduleId) {
-            Swal.fire({
-                title: '确认卸载',
-                text: '您确定要卸载这个模块吗？',
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonText: '卸载',
-                cancelButtonText: '取消'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const module = this.installedModules.find(m => m.id === moduleId);
-                    if (!module) return;
-                    
-                    // 卸载脚本
-                    this.unloadModuleScript(moduleId);
-                    
-                    // 删除存储
-                    GM_deleteValue(`module_${moduleId}`);
-                    
-                    this.loadInstalledModules();
-                    this.renderModules();
-                    
-                    Swal.fire({
-                        title: '卸载成功',
-                        text: `${module.name} 已成功卸载`,
-                        icon: 'success',
-                        timer: 1500,
-                        showConfirmButton: false
-                    });
-                }
-            });
-        }
-
-        loadModuleScript(moduleId) {
-            return new Promise((resolve, reject) => {
-                const module = this.installedModules.find(m => m.id === moduleId);
-                if (!module || !module.enabled || !module.script) {
-                    reject(new Error('Module not found or disabled'));
-                    return;
-                }
-                
-                // 检查是否已经加载
-                if (document.getElementById(`module-script-${moduleId}`)) {
-                    resolve();
-                    return;
-                }
-                
-                // 创建脚本元素
-                const script = document.createElement('script');
-                script.id = `module-script-${moduleId}`;
-                script.textContent = module.script;
-                
-                script.onload = () => resolve();
-                script.onerror = (error) => reject(error);
-                
-                document.body.appendChild(script);
-            });
-        }
-
-        unloadModuleScript(moduleId) {
-            const script = document.getElementById(`module-script-${moduleId}`);
-            if (script) {
-                script.remove();
-            }
-        }
-
-        async checkForUpdates() {
-            await this.fetchModuleList();
-            const updates = this.modules.filter(m => m.updateAvailable);
-            
-            if (updates.length === 0) {
-                Swal.fire({
-                    title: '没有可用更新',
-                    text: '所有模块都是最新版本',
-                    icon: 'info',
-                    timer: 1500,
-                    showConfirmButton: false
-                });
-            } else {
-                let html = '<p>以下模块有可用更新：</p><ul>';
-                updates.forEach(module => {
-                    const installed = this.installedModules.find(m => m.id === module.id);
-                    html += `<li><strong>${module.name}</strong>: v${installed.version} → v${module.version}</li>`;
-                });
-                html += '</ul>';
-                
-                Swal.fire({
-                    title: '发现更新',
-                    html: html,
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonText: '全部更新',
-                    cancelButtonText: '稍后'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        this.updateAllModules(updates);
-                    }
-                });
-            }
-            
-            this.renderModules();
-        }
-
-        async updateAllModules(modules) {
-            const results = [];
-            
-            for (const module of modules) {
-                try {
-                    await this.updateModule(module.id);
-                    results.push({
-                        name: module.name,
-                        success: true
-                    });
-                } catch (error) {
-                    results.push({
-                        name: module.name,
-                        success: false,
-                        error: error.message
-                    });
-                }
-            }
-            
-            let html = '<p>更新结果：</p><ul>';
-            results.forEach(result => {
-                html += `<li><strong>${result.name}</strong>: ${result.success ? '✅ 成功' : `❌ 失败 (${result.error})`}</li>`;
-            });
-            html += '</ul>';
-            
-            Swal.fire({
-                title: '更新完成',
-                html: html,
-                icon: 'info'
-            });
-        }
-
-        showModuleDetails(moduleId) {
-            const module = this.modules.find(m => m.id === moduleId);
-            if (!module) return;
-            
-            let html = `
-                <h5>${module.name} <span class="badge bg-primary">v${module.version}</span></h5>
-                <p class="mb-2">${module.description}</p>
-                <p class="small"><i class="bi bi-person"></i> 作者: ${module.author || '未知'}</p>
-            `;
-            
-            if (module.details) {
-                html += `<div class="mt-3">${module.details}</div>`;
-            }
-            
-            Swal.fire({
-                title: '模块详情',
-                html: html,
-                confirmButtonText: '安装',
-                showCancelButton: true,
-                cancelButtonText: '关闭'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    this.installModule(moduleId);
-                }
-            });
+            const modules = await response.json();
+            state.modules = modules;
+            return modules;
+        } catch (error) {
+            console.error('加载模块列表失败:', error);
+            throw error;
         }
     }
-
-    // 初始化管理器
-    new RainyunModular(shadowRoot);  // Pass the shadowRoot here
-})();
+    
+    // 安装模块
+    async function installModule(module) {
+        try {
+            const scriptUrl = `${CONFIG.baseUrl}${module.path}/${module.script}`;
+            const response = await fetch(scriptUrl);
+            
+            if (!response.ok) {
+                throw new Error(`下载脚本失败，状态码: ${response.status}`);
+            }
+            
+            const scriptContent = await response.text();
+            const moduleData = {
+                id: module.id,
+                name: module.name,
+                description: module.description,
+                version: module.version,
+                enabled: true,
+                installedAt: new Date().toISOString(),
+                scriptContent
+            };
+            
+            GM_setValue(`module_${module.id}`, JSON.stringify(moduleData));
+            loadInstalledModules();
+            registerMenuCommands();
+            
+            if (managerUI) {
+                openManager(); // 刷新界面
+            }
+            
+            showNotification(`模块 "${module.name}" 安装成功`);
+            executeModule(moduleData);
+        } catch (error) {
+            console.error('安装模块失败:', error);
+            showNotification(`安装模块失败: ${error.message}`, 'error');
+        }
+    }
+    
+    // 卸载模块
+    function uninstallModule(moduleId) {
+        const module = state.installedModules[moduleId];
+        if (!module) return;
+        
+        GM_deleteValue(`module_${moduleId}`);
+        loadInstalledModules();
+        registerMenuCommands();
+        
+        if (managerUI) {
+            openManager(); // 刷新界面
+        }
+        
+        showNotification(`模块 "${module.name}" 已卸载`);
+    }
+    
+    // 切换模块状态
+    function toggleModule(moduleId) {
+        const module = state.installedModules[moduleId];
+        if (!module) return;
+        
+        module.enabled = !module.enabled;
+        GM_setValue(`module_${moduleId}`, JSON.stringify(module));
+        registerMenuCommands();
+        
+        if (managerUI) {
+            openManager(); // 刷新界面
+        }
+        
+        const status = module.enabled ? '启用' : '禁用';
+        showNotification(`模块 "${module.name}" 已${status}`);
+        
+        if (module.enabled) {
+            executeModule(module);
+        }
+    }
+    
+    // 执行模块
+    function executeModule(module) {
+        if (!module.enabled) return;
+        
+        try {
+            const script = document.createElement('script');
+            script.textContent = module.scriptContent;
+            script.setAttribute('data-module', module.id);
+            document.head.appendChild(script);
+        } catch (error) {
+            console.error('执行模块失败:', error);
+            showNotification(`执行模块 "${module.name}" 失败: ${error.message}`, 'error');
+        }
+    }
+    
+    // 检查更新
+    async function checkForUpdates() {
+        try {
+            const lastCheck = GM_getValue('lastUpdateCheck');
+            const now = Date.now();
+            
+            // 如果距离上次检查不足24小时，则不检查
+            if (lastCheck && now - lastCheck < CONFIG.updateCheckInterval) {
+                return;
+            }
+            
+            GM_setValue('lastUpdateCheck', now);
+            
+            await loadModuleList();
+            
+            let updateAvailable = false;
+            Object.keys(state.installedModules).forEach(moduleId => {
+                const installedModule = state.installedModules[moduleId];
+                const remoteModule = state.modules.find(m => m.id === moduleId);
+                
+                if (remoteModule && remoteModule.version > installedModule.version) {
+                    updateAvailable = true;
+                    installedModule.updateAvailable = true;
+                    GM_setValue(`module_${moduleId}`, JSON.stringify(installedModule));
+                } else if (installedModule.updateAvailable) {
+                    installedModule.updateAvailable = false;
+                    GM_setValue(`module_${moduleId}`, JSON.stringify(installedModule));
+                }
+            });
+            
+            loadInstalledModules();
+            registerMenuCommands();
+            
+            if (updateAvailable) {
+                showNotification('有可用更新，请在管理器中查看', 'info');
+            }
+            
+            return updateAvailable;
+        } catch (error) {
+            console.error('检查更新失败:', error);
+            return false;
+        }
+    }
+    
+    // 检查模块更新
+    async function checkModuleUpdate(moduleInfo) {
+        const moduleId = moduleInfo.id;
+        const installedModule = state.installedModules[moduleId];
+        
+        if (!installedModule) {
+            showNotification('模块未安装', 'error');
+            return;
+        }
+        
+        try {
+            await loadModuleList();
+            const remoteModule = state.modules.find(m => m.id === moduleId);
+            
+            if (!remoteModule) {
+                showNotification('找不到远程模块信息', 'error');
+                return;
+            }
+            
+            if (remoteModule.version > installedModule.version) {
+                const confirmUpdate = confirm(`发现更新: ${installedModule.name} ${installedModule.version} → ${remoteModule.version}\n是否更新?`);
+                if (confirmUpdate) {
+                    await installModule(remoteModule);
+                }
+            } else {
+                showNotification('模块已是最新版本', 'success');
+            }
+        } catch (error) {
+            console.error('检查模块更新失败:', error);
+            showNotification(`检查更新失败: ${error.message}`, 'error');
+        }
+    }
+    
+    // 显示通知
+    function showNotification(message, type = 'info') {
+        const notification = document.createElement('div');
+        notification.textContent = message;
+        notification.style.cssText = `
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 4px;
+            color: white;
+            font-weight: bold;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            z-index: 99999;
+            transform: translateY(20px);
+            opacity: 0;
+            transition: transform 0.3s, opacity 0.3s;
+        `;
+        
+        if (type === 'error') {
+            notification.style.backgroundColor = '#F44336';
+        } else if (type === 'success') {
+            notification.style.backgroundColor = '#4CAF50';
+        } else {
+            notification.style.backgroundColor = '#2196F3';
+        }
+        
+        document.body.appendChild(notification);
+        
+        // 显示通知
+        setTimeout(() => {
+            notification.style.transform = 'translateY(0)';
+            notification.style.opacity = '1';
+        }, 10);
+        
+        // 自动关闭
+        setTimeout(() => {
+            notification.style.transform = 'translateY(20px)';
+            notification.style.opacity = '0';
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+    }
+    
+    // 初始化
+    init();
+})();  
