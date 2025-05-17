@@ -402,14 +402,14 @@
     // 执行模块
     function executeModule(module) {
         if (!module.enabled) return;
-        
         try {
+            // 创建独立的脚本标签，避免作用域污染
             const script = document.createElement('script');
-            script.textContent = module.scriptContent;
+            script.textContent = `(function(){${module.scriptContent}})();`; // 包裹立即执行函数
             script.setAttribute('data-module', module.id);
             document.head.appendChild(script);
         } catch (error) {
-            console.error('执行模块失败:', error);
+            console.error(`执行模块 ${module.name} 失败:`, error);
             showNotification(`执行模块 "${module.name}" 失败: ${error.message}`, 'error');
         }
     }

@@ -2,8 +2,8 @@
     'use strict';
 
     // 从模块管理器获取配置
-    const moduleConfig = unsafeWindow.RainyunModularConfig 
-        ? unsafeWindow.RainyunModularConfig['privacy-protection'] || {} 
+    const moduleConfig = window.RainyunModularConfig 
+        ? window.RainyunModularConfig['privacy-protection'] || {} 
         : {};
 
     var privacyProtectionEnabled = moduleConfig.enabled !== undefined 

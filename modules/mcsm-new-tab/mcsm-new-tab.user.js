@@ -2,8 +2,8 @@
     'use strict';
 
     // 从模块管理器获取配置
-    const moduleConfig = unsafeWindow.RainyunModularConfig 
-        ? unsafeWindow.RainyunModularConfig['mcsm-new-tab'] || {} 
+    const moduleConfig = window.RainyunModularConfig 
+        ? window.RainyunModularConfig['mcsm-new-tab'] || {} 
         : {};
 
     const enabled = moduleConfig.enabled !== undefined 
