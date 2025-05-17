@@ -41,16 +41,39 @@
         loadInstalledModules();
         await checkForUpdates();
         registerMenuCommands();
+        
+        // 新增自启动逻辑
+        if (document.readyState === 'complete') {
+            autoStartModules();
+        } else {
+            window.addEventListener('load', () => autoStartModules());
+        }
     }
+
+    // 自动启动模块
+    function autoStartModules() {
+    Object.values(state.installedModules).forEach(module => {
+        if (module.enabled) {
+            console.log(`[管理器] 自动启动模块: ${module.name}`);
+            executeModule(module);
+        }
+    });
+}
     
     // 加载已安装模块
     function loadInstalledModules() {
-        const modules = GM_listValues().filter(key => key.startsWith('module_'));
-        state.installedModules = modules.reduce((acc, key) => {
-            const moduleId = key.replace('module_', '');
-            acc[moduleId] = JSON.parse(GM_getValue(key));
-            return acc;
-        }, {});
+        state.installedModules = GM_listValues()
+            .filter(key => key.startsWith('module_'))
+            .reduce((acc, key) => {
+                try {
+                    const moduleId = key.replace('module_', '');
+                    acc[moduleId] = JSON.parse(GM_getValue(key));
+                } catch (e) {
+                    console.error('解析模块配置失败:', key, e);
+                    GM_deleteValue(key); // 自动清理损坏数据
+                }
+                return acc;
+            }, {});
     }
     
     // 注册菜单命令
@@ -403,26 +426,38 @@
     function executeModule(module) {
         if (!module.enabled) return;
         try {
-            // 创建配置对象
             const config = {
                 enabled: module.enabled,
-                // 可以扩展其他配置参数
+                // 可扩展其他配置参数
             };
 
-            // 创建独立的脚本标签
             const script = document.createElement('script');
             script.textContent = `
                 (function() {
+                    // 配置注入
                     window.RainyunModularConfig = window.RainyunModularConfig || {};
                     window.RainyunModularConfig['${module.id}'] = ${JSON.stringify(config)};
-                    ${module.scriptContent}
+                    
+                    // 智能等待DOM就绪
+                    const executor = () => {
+                        try {
+                            ${module.scriptContent}
+                        } catch (e) {
+                            console.error('[模块加载] 执行错误:', e);
+                        }
+                    };
+                    
+                    if (document.readyState === 'loading') {
+                        document.addEventListener('DOMContentLoaded', executor);
+                    } else {
+                        setTimeout(executor, 100); // 确保异步执行
+                    }
                 })();
             `;
             script.setAttribute('data-module', module.id);
             document.head.appendChild(script);
         } catch (error) {
             console.error(`执行模块 ${module.name} 失败:`, error);
-            showNotification(`执行模块 "${module.name}" 失败: ${error.message}`, 'error');
         }
     }
     
