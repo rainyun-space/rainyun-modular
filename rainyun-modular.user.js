@@ -1,10 +1,12 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.0.1
+// @version      1.0
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
-// @author       ndxzzy
+// @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
+// @updateURL    https://github.com/rainyun-space/rainyun-modular/raw/main/rainyun-modular.user.js
+// @downloadURL  https://github.com/rainyun-space/rainyun-modular/raw/main/rainyun-modular.user.js
 // @grant        GM_registerMenuCommand
 // @grant        GM_unregisterMenuCommand
 // @grant        GM_getValue
@@ -21,8 +23,8 @@
     
     // 脚本配置
     const CONFIG = {
-        moduleListUrl: 'https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/module-list.json',
-        baseUrl: 'https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/',
+        moduleListUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/module-list.json',
+        baseUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/',
         updateCheckInterval: 24 * 60 * 60 * 1000 // 24小时
     };
 

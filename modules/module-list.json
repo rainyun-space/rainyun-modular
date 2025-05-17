@@ -5,7 +5,7 @@
     "description": "给包含特定隐私内容的元素添加模糊效果，并提供开关按钮控制",
     "version": "0.16",
     "path": "privacy-protection",
-    "script": "privacy-protection.user.js"
+    "script": "0.16.user.js"
   },
   {
     "id": "mcsm-new-tab",
@@ -13,7 +13,7 @@
     "description": "将MCSM一键登录改为新标签页打开",
     "version": "0.1",
     "path": "mcsm-new-tab",
-    "script": "mcsm-new-tab.user.js"
+    "script": "0.1.user.js"
   },
   {
     "id": "beautify",
@@ -21,7 +21,7 @@
     "description": "自定义背景图片和页面字体[By小御坂]",
     "version": "1.2",
     "path": "beautify",
-    "script": "beautify.user.js",
+    "script": "1.2.user.js",
     "configSchema": [
       {
         "key": "background",
