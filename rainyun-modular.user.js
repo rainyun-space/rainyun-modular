@@ -403,8 +403,75 @@
         card.appendChild(header);
         card.appendChild(description);
         card.appendChild(actions);
+
+        if (isInstalled) {
+            const configForm = createConfigForm(module.id);
+            if (configForm) {
+                card.appendChild(configForm);
+            }
+        }
         
         return card;
+    }
+
+    // 配置表单函数
+    function createConfigForm(moduleId) {
+        const module = state.installedModules[moduleId];
+        const schema = state.modules.find(m => m.id === moduleId)?.configSchema;
+        if (!schema) return null;
+
+        const form = document.createElement('div');
+        form.style.marginTop = '12px';
+        form.style.borderTop = '1px dashed #eee';
+        form.style.paddingTop = '12px';
+
+        schema.forEach(item => {
+            const wrapper = document.createElement('div');
+            wrapper.style.marginBottom = '12px';
+
+            const label = document.createElement('label');
+            label.textContent = item.label;
+            label.style.display = 'block';
+            label.style.marginBottom = '4px';
+            label.style.fontSize = '14px';
+            label.style.color = STYLE_CONFIG.textColor;
+
+            let input;
+            if (item.type === 'text') {
+                input = document.createElement('input');
+                input.type = 'text';
+                input.value = module.config[item.key] || item.default;
+                input.style.width = '100%';
+                input.style.padding = '8px';
+                input.style.borderRadius = '4px';
+                input.style.border = `1px solid ${STYLE_CONFIG.primaryColor}33`;
+            } else if (item.type === 'select') {
+                input = document.createElement('select');
+                input.style.width = '100%';
+                input.style.padding = '8px';
+                input.style.borderRadius = '4px';
+                input.style.border = `1px solid ${STYLE_CONFIG.primaryColor}33`;
+                item.options.forEach(opt => {
+                    const option = document.createElement('option');
+                    option.value = opt;
+                    option.text = opt;
+                    option.selected = module.config[item.key] === opt;
+                    input.appendChild(option);
+                });
+            }
+
+            input.addEventListener('change', () => {
+                module.config[item.key] = input.type === 'select-one' ? input.value : input.value;
+                GM_setValue(`module_${moduleId}`, JSON.stringify(module));
+                executeModule(module);
+            });
+
+            wrapper.appendChild(label);
+            wrapper.appendChild(input);
+            form.appendChild(wrapper);
+        });
+
+        return form;
     }
     
     // 加载模块列表
@@ -441,7 +508,11 @@
                 version: module.version,
                 enabled: true,
                 installedAt: new Date().toISOString(),
-                scriptContent
+                scriptContent,
+                config: module.configSchema ? module.configSchema.reduce((acc, item) => {
+                    acc[item.key] = item.default;
+                    return acc;
+                }, {}) : {}
             };
             
             GM_setValue(`module_${module.id}`, JSON.stringify(moduleData));
@@ -507,9 +578,12 @@
     function executeModule(module) {
         if (!module.enabled) return;
         try {
+            // 清理旧脚本
+            document.querySelectorAll(`script[data-module="${module.id}"]`).forEach(s => s.remove());
+
             const config = {
                 enabled: module.enabled,
-                // 可扩展其他配置参数
+                config: module.config || {}
             };
 
             const script = document.createElement('script');

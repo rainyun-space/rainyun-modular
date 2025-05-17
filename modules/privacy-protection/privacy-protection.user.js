@@ -24,7 +24,7 @@
 
     const keywordsForTable = ['日志ID', 'CNAME', '桶名', '服务名称'];
 
-    const keywordsForP = ['公网IP', '服务器ID', '标签'];
+    const keywordsForP = ['公网IP', '服务器ID', '标签:'];
 
     const smallKeywordsForTD = [
         '公网 IP 地址：', '公网IP地址：', '内网IP：', '远程连接地址 (RDP/SSH)：', '面板主账户：', '安装结果输出', 'IPv4公网地址'
