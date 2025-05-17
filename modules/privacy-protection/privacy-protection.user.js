@@ -9,7 +9,7 @@
     // 使用配置中的启用状态
     var privacyProtectionEnabled = moduleConfig.enabled !== undefined 
         ? moduleConfig.enabled 
-        : false;
+        : true;  // 默认值
 
     // 敏感关键词列表
     const keywordsForH4 = [
