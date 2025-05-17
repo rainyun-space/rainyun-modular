@@ -7,9 +7,9 @@
         : {};
 
     // 使用配置中的启用状态
-    var privacyProtectionEnabled = moduleConfig.enabled !== undefined 
-        ? moduleConfig.enabled 
-        : true;  // 默认值
+    var privacyProtectionEnabled = (moduleConfig.enabled !== undefined && moduleConfig.enabled) 
+        ? false  // 即使模块已启用，仍然默认关闭功能
+        : false; // 双重确认默认关闭
 
     // 敏感关键词列表
     const keywordsForH4 = [

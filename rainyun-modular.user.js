@@ -25,6 +25,16 @@
         baseUrl: 'https://raw.githubusercontent.com/ndxzzy/rainyun-modular/main/modules/',
         updateCheckInterval: 24 * 60 * 60 * 1000 // 24小时
     };
+
+    // 样式配置
+    const STYLE_CONFIG = {
+        primaryColor: "#37b5c1",
+        secondaryColor: "#2f9ba3",
+        textColor: "#2c3e50",
+        backgroundColor: "#ffffff",
+        borderRadius: "12px",
+        boxShadow: "0 8px 32px rgba(0,0,0,0.1)"
+    };
     
     // 状态管理
     const state = {
@@ -39,6 +49,7 @@
     // 初始化
     async function init() {
         loadInstalledModules();
+        document.body.appendChild(createFloatingButton());
         await checkForUpdates();
         registerMenuCommands();
         
@@ -97,93 +108,150 @@
         });
     }
     
+    // 创建悬浮按钮
+    function createFloatingButton() {
+        const btn = document.createElement('div');
+        btn.innerHTML = `
+            <div style="
+                background: ${STYLE_CONFIG.primaryColor};
+                width: 48px;
+                height: 48px;
+                border-radius: 50%;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                cursor: pointer;
+                transition: all 0.3s ease;
+                box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            ">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" 
+                     stroke="#fff" stroke-width="2" stroke-linecap="round" 
+                     stroke-linejoin="round">
+                    <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
+                </svg>
+            </div>
+        `;
+
+        // 定位样式
+        Object.assign(btn.style, {
+            position: 'fixed',
+            left: '20px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            zIndex: '9998',
+            transition: 'transform 0.3s ease'
+        });
+
+        // 悬停动画
+        btn.addEventListener('mouseenter', () => {
+            btn.style.transform = 'translateY(-50%) scale(1.1)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.transform = 'translateY(-50%) scale(1)';
+        });
+
+        // 点击事件
+        btn.addEventListener('click', openManager);
+        return btn;
+    }
+
     // 打开管理器界面
     function openManager() {
-        if (managerUI) {
-            managerUI.remove();
-        }
-        
-        // 创建UI
+        if (managerUI) return;
+
+        // 创建主容器
         managerUI = document.createElement('div');
-        managerUI.id = 'rainyun-script-manager';
-        managerUI.style.cssText = `
-            position: fixed;
-            top: 50px;
-            right: 50px;
-            width: 600px;
-            max-height: 80vh;
-            background: white;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.1);
-            z-index: 9999;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-        `;
-        
+        Object.assign(managerUI.style, {
+            position: 'fixed',
+            left: '80px', // 距离左侧距离
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '360px',
+            maxHeight: '80vh',
+            backgroundColor: STYLE_CONFIG.backgroundColor,
+            borderRadius: STYLE_CONFIG.borderRadius,
+            boxShadow: STYLE_CONFIG.boxShadow,
+            zIndex: '9999',
+            opacity: '0',
+            transition: 'opacity 0.3s ease, transform 0.3s ease'
+        });
+
         // 头部
         const header = document.createElement('div');
-        header.style.cssText = `
-            padding: 16px;
-            background: #f8f9fa;
-            border-bottom: 1px solid #ddd;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        `;
-        
+        Object.assign(header.style, {
+            padding: '20px',
+            borderBottom: `1px solid rgba(0,0,0,0.1)`,
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center'
+        });
+
         const title = document.createElement('h3');
-        title.textContent = 'Rainyun 脚本管理器';
-        title.style.margin = '0';
-        
-        const closeBtn = document.createElement('button');
-        closeBtn.textContent = '关闭';
-        closeBtn.style.cssText = `
-            background: #f44336;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 4px;
-            cursor: pointer;
-        `;
-        closeBtn.addEventListener('click', () => managerUI.remove());
-        
+        title.textContent = '模块管理器';
+        Object.assign(title.style, {
+            margin: '0',
+            color: STYLE_CONFIG.textColor,
+            fontSize: '1.2em'
+        });
+
+        const closeBtn = createIconButton('✕');
+        closeBtn.addEventListener('click', () => {
+            managerUI.style.opacity = '0';
+            setTimeout(() => managerUI.remove(), 300);
+        });
+
         header.appendChild(title);
         header.appendChild(closeBtn);
-        
-        // 主体内容
+
+        // 内容区域
         const content = document.createElement('div');
-        content.style.cssText = `
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        `;
-        
-        // 模块列表
-        const moduleList = document.createElement('div');
-        content.appendChild(moduleList);
-        
+        Object.assign(content.style, {
+            padding: '16px',
+            overflowY: 'auto',
+            maxHeight: 'calc(80vh - 68px)'
+        });
+
         // 加载模块列表
         loadModuleList().then(modules => {
-            moduleList.innerHTML = '';
-            
-            if (!modules || modules.length === 0) {
-                moduleList.innerHTML = '<p>未找到可用模块</p>';
-                return;
-            }
-            
+            content.innerHTML = '';
             modules.forEach(module => {
-                const moduleCard = createModuleCard(module);
-                moduleList.appendChild(moduleCard);
+                content.appendChild(createModuleCard(module));
             });
-        }).catch(err => {
-            moduleList.innerHTML = `<p>加载模块列表失败: ${err.message}</p>`;
         });
-        
+
         managerUI.appendChild(header);
         managerUI.appendChild(content);
         document.body.appendChild(managerUI);
+
+        // 入场动画
+        setTimeout(() => {
+            managerUI.style.opacity = '1';
+            managerUI.style.transform = 'translateY(-50%) translateX(0)';
+        }, 10);
+    }
+
+    // 创建图标按钮
+    function createIconButton(icon) {
+        const btn = document.createElement('div');
+        btn.innerHTML = icon;
+        Object.assign(btn.style, {
+            width: '32px',
+            height: '32px',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+            transition: 'background 0.2s ease',
+            color: STYLE_CONFIG.textColor
+        });
+        btn.addEventListener('mouseenter', () => {
+            btn.style.background = 'rgba(0,0,0,0.05)';
+        });
+        btn.addEventListener('mouseleave', () => {
+            btn.style.background = 'transparent';
+        });
+        return btn;
     }
     
     // 创建模块卡片
@@ -192,13 +260,14 @@
         const isEnabled = isInstalled ? isInstalled.enabled : false;
         
         const card = document.createElement('div');
-        card.style.cssText = `
-            border: 1px solid #eee;
-            border-radius: 8px;
-            padding: 16px;
-            margin-bottom: 16px;
-            transition: box-shadow 0.3s;
-        `;
+        Object.assign(card.style, {
+            background: '#f8fafc',
+            borderRadius: '8px',
+            padding: '16px',
+            marginBottom: '12px',
+            transition: 'box-shadow 0.3s ease',
+            border: '1px solid rgba(0,0,0,0.05)'
+        });
         
         card.onmouseover = () => {
             card.style.boxShadow = '0 4px 12px rgba(0,0,0,0.08)';
