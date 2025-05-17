@@ -16,26 +16,25 @@
     "script": "mcsm-new-tab.user.js"
   },
   {
-  "id": "beautify",
-  "name": "界面美化",
-  "description": "自定义背景图片和页面字体[By小御坂]",
-  "version": "1.2",
-  "path": "beautify",
-  "script": "beautify.user.js",
-  "configSchema": [
-    {
-      "key": "background",
-      "type": "text",
-      "label": "背景图片URL",
-      "default": "http://pic.rmb.bdstatic.com/bjh/ebe942a9de49856f389c65f25a338335.png"
-    },
-    {
-      "key": "font",
-      "type": "select",
-      "label": "字体选择",
-      "options": ["楷体", "宋体", "微软雅黑", "Arial"],
-      "default": "楷体"
-    }
-  ]
-}
-]  
+    "id": "beautify",
+    "name": "界面美化",
+    "description": "自定义背景图片和页面字体[By小御坂]",
+    "version": "1.2",
+    "path": "beautify",
+    "script": "beautify.user.js",
+    "configSchema": [
+      {
+        "key": "background",
+        "type": "text",
+        "label": "背景图片URL",
+        "default": "http://pic.rmb.bdstatic.com/bjh/ebe942a9de49856f389c65f25a338335.png"
+      },
+      {
+        "key": "font",
+        "type": "text",
+        "label": "字体",
+        "default": "楷体"
+      }
+    ]
+  }
+]
