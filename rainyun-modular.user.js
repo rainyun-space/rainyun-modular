@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.0
+// @version      1.1
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -404,14 +404,13 @@
         
         card.appendChild(header);
         card.appendChild(description);
-        card.appendChild(actions);
-
         if (isInstalled) {
             const configForm = createConfigForm(module.id);
             if (configForm) {
                 card.appendChild(configForm);
             }
         }
+        card.appendChild(actions);
         
         return card;
     }

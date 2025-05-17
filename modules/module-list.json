@@ -1,16 +1,16 @@
 [
   {
     "id": "privacy-protection",
-    "name": "雨云截图隐私保护",
-    "description": "给包含特定隐私内容的元素添加模糊效果，并提供开关按钮控制",
+    "name": "隐私保护",
+    "description": "给包含特定隐私内容的元素持续添加模糊效果，并提供可拖动悬浮按钮控制，适用于截图/录屏等多个场景",
     "version": "0.16",
     "path": "privacy-protection",
     "script": "0.16.user.js"
   },
   {
     "id": "mcsm-new-tab",
-    "name": "雨云MCSM新标签页打开",
-    "description": "将MCSM一键登录改为新标签页打开",
+    "name": "MCSM新标签页打开",
+    "description": "将MCSM一键登录从弹窗打开改为新标签页打开",
     "version": "0.1",
     "path": "mcsm-new-tab",
     "script": "0.1.user.js"
@@ -18,7 +18,7 @@
   {
     "id": "beautify",
     "name": "界面美化",
-    "description": "自定义背景图片和页面字体[By小御坂]",
+    "description": "自定义背景图片和页面字体 [By 小御坂]",
     "version": "1.2",
     "path": "beautify",
     "script": "1.2.user.js",
@@ -32,9 +32,17 @@
       {
         "key": "font",
         "type": "text",
-        "label": "字体[修改完会直接卡死,请彻底关闭页面再打开]",
+        "label": "字体[改完直接卡死,请彻底关闭页面再打开]",
         "default": "楷体"
       }
     ]
+  },
+  {
+    "id": "user-info-display",
+    "name": "个人信息展示",
+    "description": "在设置页面显示完整的个人信息",
+    "version": "0.1",
+    "path": "user-info-display",
+    "script": "0.1.user.js"
   }
 ]
