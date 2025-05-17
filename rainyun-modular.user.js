@@ -13,7 +13,7 @@
 // @grant        GM_listValues
 // @grant        GM_download
 // @grant        GM_xmlhttpRequest
-// @grant        unsafeWindow
+// @connect      github.com
 // ==/UserScript==
 
 (function() {
@@ -403,9 +403,21 @@
     function executeModule(module) {
         if (!module.enabled) return;
         try {
-            // 创建独立的脚本标签，避免作用域污染
+            // 创建配置对象
+            const config = {
+                enabled: module.enabled,
+                // 可以扩展其他配置参数
+            };
+
+            // 创建独立的脚本标签
             const script = document.createElement('script');
-            script.textContent = `(function(){${module.scriptContent}})();`; // 包裹立即执行函数
+            script.textContent = `
+                (function() {
+                    window.RainyunModularConfig = window.RainyunModularConfig || {};
+                    window.RainyunModularConfig['${module.id}'] = ${JSON.stringify(config)};
+                    ${module.scriptContent}
+                })();
+            `;
             script.setAttribute('data-module', module.id);
             document.head.appendChild(script);
         } catch (error) {
