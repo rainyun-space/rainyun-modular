@@ -117,9 +117,9 @@
         privacyProtectionEnabled = !privacyProtectionEnabled;
         
         // 更新模块配置
-        if (unsafeWindow.RainyunModularConfig) {
-            unsafeWindow.RainyunModularConfig['privacy-protection'] = {
-                ...(unsafeWindow.RainyunModularConfig['privacy-protection'] || {}),
+        if (window.RainyunModularConfig) {
+            window.RainyunModularConfig['privacy-protection'] = {
+                ...(window.RainyunModularConfig['privacy-protection'] || {}),
                 enabled: privacyProtectionEnabled
             };
         }
