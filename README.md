@@ -108,9 +108,4 @@ modules/
 3. 通过测试后合并到main分支
 4. 自动进入模块商店
 
-## 项目维护
-- 作者：ndxzzy
-- 反馈渠道：GitHub Issues
-- 开源协议：MIT License
-
 欢迎贡献新模块！🎉
