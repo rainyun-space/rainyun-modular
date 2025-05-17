@@ -157,7 +157,10 @@
 
     // 打开管理器界面
     function openManager() {
-        if (managerUI) return;
+        if (managerUI) {
+            managerUI.remove();
+            managerUI = null;
+        }
 
         // 创建主容器
         managerUI = document.createElement('div');
@@ -197,7 +200,10 @@
         const closeBtn = createIconButton('✕');
         closeBtn.addEventListener('click', () => {
             managerUI.style.opacity = '0';
-            setTimeout(() => managerUI.remove(), 300);
+            setTimeout(() => {
+                managerUI.remove();
+                managerUI = null; // 重置变量
+            }, 300);
         });
 
         header.appendChild(title);
@@ -443,7 +449,9 @@
             registerMenuCommands();
             
             if (managerUI) {
-                openManager(); // 刷新界面
+                managerUI.remove();
+                managerUI = null;
+                openManager();
             }
             
             showNotification(`模块 "${module.name}" 安装成功`);
@@ -464,6 +472,8 @@
         registerMenuCommands();
         
         if (managerUI) {
+            managerUI.remove();
+            managerUI = null;
             openManager(); // 刷新界面
         }
         
@@ -480,6 +490,8 @@
         registerMenuCommands();
         
         if (managerUI) {
+            managerUI.remove();
+            managerUI = null;
             openManager(); // 刷新界面
         }
         
