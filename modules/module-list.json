@@ -44,5 +44,21 @@
     "version": "0.1",
     "path": "user-info-display",
     "script": "0.1.user.js"
+  },
+  {
+    "id": "dark-mode",
+    "name": "深色模式",
+    "description": "启用雨云原生支持的深色模式",
+    "version": "0.1",
+    "path": "dark-mode",
+    "script": "0.1.user.js"
+  },
+  {
+    "id": "no-watermark",
+    "name": "水印清除",
+    "description": "清除微信支付二维码上的安全提示水印",
+    "version": "0.1",
+    "path": "no-watermark",
+    "script": "0.1.user.js"
   }
 ]
