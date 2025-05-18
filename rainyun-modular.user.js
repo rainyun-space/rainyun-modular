@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.1
+// @version      1.2
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -15,6 +15,7 @@
 // @grant        GM_listValues
 // @grant        GM_download
 // @grant        GM_xmlhttpRequest
+// @grant        GM_addStyle
 // @connect      github.com
 // ==/UserScript==
 
@@ -338,7 +339,7 @@
         installBtn.textContent = isInstalled ? '卸载' : '安装';
         installBtn.style.cssText = `
             flex: 1;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -361,7 +362,7 @@
         toggleBtn.textContent = isInstalled ? (isEnabled ? '禁用' : '启用') : '不可用';
         toggleBtn.style.cssText = `
             flex: 1;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
@@ -384,7 +385,7 @@
         updateBtn.textContent = '检查更新';
         updateBtn.style.cssText = `
             flex: 1;
-            padding: 8px 16px;
+            padding: 6px 12px;
             border: none;
             border-radius: 4px;
             cursor: pointer;

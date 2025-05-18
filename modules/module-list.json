@@ -57,8 +57,8 @@
     "id": "no-watermark",
     "name": "水印清除",
     "description": "清除微信支付二维码上的安全提示水印",
-    "version": "0.1",
+    "version": "0.2",
     "path": "no-watermark",
-    "script": "0.1.user.js"
+    "script": "0.2.user.js"
   }
 ]
