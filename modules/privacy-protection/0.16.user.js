@@ -203,5 +203,5 @@
         applyPrivacyProtection();
     }
     
-    console.log('[雨云截图隐私保护] 模块已启动');
+    console.log('[隐私保护] 模块已启动');
 })();  
