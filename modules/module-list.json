@@ -38,6 +38,38 @@
     ]
   },
   {
+    "id": "custom-background",
+    "name": "自定义背景",
+    "description": "自定义控制台背景图片",
+    "version": "0.1",
+    "path": "custom-background",
+    "script": "0.1.user.js",
+    "configSchema": [
+      {
+        "key": "background",
+        "type": "text",
+        "label": "背景图片URL",
+        "default": "http://pic.rmb.bdstatic.com/bjh/ebe942a9de49856f389c65f25a338335.png"
+      }
+    ]
+  },
+  {
+    "id": "custom-font",
+    "name": "自定义字体",
+    "description": "安全修改页面显示字体",
+    "version": "0.1",
+    "path": "custom-font",
+    "script": "0.1.user.js",
+    "configSchema": [
+      {
+        "key": "font",
+        "type": "text",
+        "label": "选择字体",
+        "default": "楷体"
+      }
+    ]
+  },
+  {
     "id": "user-info-display",
     "name": "个人信息展示",
     "description": "在设置页面显示完整的个人信息",
