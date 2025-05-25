@@ -27,6 +27,7 @@
         getModuleListUrl: () => `${CONFIG.baseModuleListUrl}?t=${Math.floor(Date.now()/60000)}`,
         getModuleUrl: (path, script) => `${CONFIG.baseUrl}${path}/${script}?t=${Math.floor(Date.now()/60000)}`,
         baseModuleListUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/module-list.json',
+        baseVersionUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/version.json',
         baseUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/',
         updateCheckInterval: 24 * 60 * 60 * 1000
     };
@@ -69,13 +70,13 @@
 
     // 自动启动模块
     function autoStartModules() {
-    Object.values(state.installedModules).forEach(module => {
-        if (module.enabled) {
-            console.log(`[管理器] 自动启动模块: ${module.name}`);
-            executeModule(module);
-        }
-    });
-}
+        Object.values(state.installedModules).forEach(module => {
+            if (module.enabled) {
+                console.log(`[管理器] 自动启动模块: ${module.name}`);
+                executeModule(module);
+            }
+        });
+    }
     
     // 加载已安装模块
     function loadInstalledModules() {
@@ -170,7 +171,7 @@
     }
 
     // 打开管理器界面
-    function openManager() {
+    async function openManager() {
         if (managerUI) {
             managerUI.remove();
             managerUI = null;
@@ -212,9 +213,32 @@
         });
 
         // 更新检查
-        const updateStatus = checkSelfUpdate();
+        const updateStatus = await checkSelfUpdate().catch(() => ({
+            hasUpdate: false,
+            error: '检查失败',
+            status: 'error'
+        }));
+
         const updateIndicator = document.createElement('span');
-        updateIndicator.textContent = updateStatus.hasUpdate ? '有更新' : '已最新';
+        let statusText = '';
+        let backgroundColor = '';
+        let textColor = '';
+
+        if (updateStatus.status === 'error') {
+            statusText = '检查失败';
+            backgroundColor = '#FF980033';
+            textColor = '#FF9800';
+        } else if (updateStatus.hasUpdate) {
+            statusText = '有更新';
+            backgroundColor = '#F4433633';
+            textColor = '#F44336';
+        } else {
+            statusText = '已最新';
+            backgroundColor = '#4CAF5033';
+            textColor = '#4CAF50';
+        }
+
+        updateIndicator.textContent = statusText;
         updateIndicator.style.cssText = `
             padding: 4px 8px;
             border-radius: 4px;
@@ -222,8 +246,8 @@
             font-weight: bold;
             margin-left: 8px;
             cursor: ${updateStatus.hasUpdate ? 'pointer' : 'default'};
-            background-color: ${updateStatus.hasUpdate ? '#F4433633' : '#4CAF5033'};
-            color: ${updateStatus.hasUpdate ? '#F44336' : '#4CAF50'};
+            background-color: ${backgroundColor};
+            color: ${textColor};
         `;
         
         if (updateStatus.hasUpdate) {
@@ -275,24 +299,30 @@
 
     async function checkSelfUpdate() {
         try {
-            const currentVersion = parseFloat(GM_info.script.version);
-            const versionUrl = 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/version.json?t=' + Math.floor(Date.now()/60000);
+            const currentVersion = GM_info.script.version;
+            const versionUrl = `${CONFIG.baseVersionUrl}?t=${Math.floor(Date.now()/60000)}`;
             
             const response = await fetch(versionUrl);
             if (!response.ok) throw new Error(`HTTP错误: ${response.status}`);
             
             const versionInfo = await response.json();
-            const remoteVersion = parseFloat(versionInfo.version);
+            const versionComparison = compareVersions(versionInfo.version, currentVersion);
             
             return {
-                hasUpdate: remoteVersion > currentVersion,
+                status: 'success',
+                hasUpdate: versionComparison > 0,
                 currentVersion,
-                remoteVersion,
-                updateUrl: versionInfo.updateUrl
+                remoteVersion: versionInfo.version,
+                updateUrl: versionInfo.updateUrl,
+                isDowngrade: versionComparison < 0
             };
         } catch (error) {
             console.error('检查管理器更新失败:', error);
-            return { hasUpdate: false };
+            return { 
+                status: 'error',
+                hasUpdate: false,
+                error: error.message 
+            };
         }
     }
 
@@ -483,12 +513,16 @@
     }
 
     function compareVersions(v1, v2) {
-        // 统一转为字符串并清理非数字字符
-        const cleanVersion = v => String(v).replace(/[^\d.]/g, '');
-        const version1 = cleanVersion(v1).split('.').map(Number);
-        const version2 = cleanVersion(v2).split('.').map(Number);
+        // 清理并规范版本格式
+        const normalize = v => 
+            String(v).replace(/^v/, '')          // 去除v前缀
+                .replace(/(\.0+)+$/, '')     // 去除末尾的.0
+                .split('.')
+                .map(n => parseInt(n, 10) || 0);
 
-        // 分段比较
+        const version1 = normalize(v1);
+        const version2 = normalize(v2);
+
         const maxLength = Math.max(version1.length, version2.length);
         for (let i = 0; i < maxLength; i++) {
             const num1 = version1[i] || 0;
@@ -496,7 +530,6 @@
             if (num1 > num2) return 1;
             if (num1 < num2) return -1;
         }
-
         return 0;
     }
 
