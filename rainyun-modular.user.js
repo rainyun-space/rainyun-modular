@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.2
+// @version      1.3
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -24,9 +24,11 @@
     
     // 脚本配置
     const CONFIG = {
-        moduleListUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/module-list.json',
+        getModuleListUrl: () => `${CONFIG.baseModuleListUrl}?t=${Math.floor(Date.now()/60000)}`,
+        getModuleUrl: (path, script) => `${CONFIG.baseUrl}${path}/${script}?t=${Math.floor(Date.now()/60000)}`,
+        baseModuleListUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/module-list.json',
         baseUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/',
-        updateCheckInterval: 24 * 60 * 60 * 1000 // 24小时
+        updateCheckInterval: 24 * 60 * 60 * 1000
     };
 
     // 样式配置
@@ -55,6 +57,7 @@
         document.body.appendChild(createFloatingButton());
         await checkForUpdates();
         registerMenuCommands();
+        await loadModuleList();
         
         // 新增自启动逻辑
         if (document.readyState === 'complete') {
@@ -115,7 +118,7 @@
     function createFloatingButton() {
         const btn = document.createElement('div');
         btn.innerHTML = `
-            <div style="
+            <div class="floating-btn-inner" style="
                 background: ${STYLE_CONFIG.primaryColor};
                 width: 48px;
                 height: 48px;
@@ -126,34 +129,42 @@
                 cursor: pointer;
                 transition: all 0.3s ease;
                 box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                opacity: 0.6;
             ">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" 
-                     stroke="#fff" stroke-width="2" stroke-linecap="round" 
-                     stroke-linejoin="round">
+                    stroke="#fff" stroke-width="2" stroke-linecap="round" 
+                    stroke-linejoin="round">
                     <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"></path>
                 </svg>
             </div>
         `;
 
-        // 定位样式
+        // 扩大悬浮检测区域（padding增加20px）
         Object.assign(btn.style, {
             position: 'fixed',
-            left: '20px',
+            left: '-24px',
             top: '50%',
             transform: 'translateY(-50%)',
             zIndex: '9998',
-            transition: 'transform 0.3s ease'
+            transition: 'all 0.3s ease',
+            padding: '20px', // 扩大悬浮检测区
+            margin: '-20px'  // 抵消padding对位置的影响
         });
 
-        // 悬停动画
+        const innerBtn = btn.querySelector('.floating-btn-inner');
+
+        // 鼠标进入检测区（包括周围20px）
         btn.addEventListener('mouseenter', () => {
-            btn.style.transform = 'translateY(-50%) scale(1.1)';
-        });
-        btn.addEventListener('mouseleave', () => {
-            btn.style.transform = 'translateY(-50%) scale(1)';
+            btn.style.left = '20px';
+            innerBtn.style.opacity = '1';
         });
 
-        // 点击事件
+        // 鼠标离开检测区
+        btn.addEventListener('mouseleave', () => {
+            btn.style.left = '-24px';
+            innerBtn.style.opacity = '0.6';
+        });
+
         btn.addEventListener('click', openManager);
         return btn;
     }
@@ -200,6 +211,29 @@
             fontSize: '1.2em'
         });
 
+        // 更新检查
+        const updateStatus = checkSelfUpdate();
+        const updateIndicator = document.createElement('span');
+        updateIndicator.textContent = updateStatus.hasUpdate ? '有更新' : '已最新';
+        updateIndicator.style.cssText = `
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 8px;
+            cursor: ${updateStatus.hasUpdate ? 'pointer' : 'default'};
+            background-color: ${updateStatus.hasUpdate ? '#F4433633' : '#4CAF5033'};
+            color: ${updateStatus.hasUpdate ? '#F44336' : '#4CAF50'};
+        `;
+        
+        if (updateStatus.hasUpdate) {
+            updateIndicator.onclick = () => {
+                window.open(updateStatus.updateUrl);
+            };
+        }
+        
+        title.appendChild(updateIndicator);
+
         const closeBtn = createIconButton('✕');
         closeBtn.addEventListener('click', () => {
             managerUI.style.opacity = '0';
@@ -239,6 +273,29 @@
         }, 10);
     }
 
+    async function checkSelfUpdate() {
+        try {
+            const currentVersion = parseFloat(GM_info.script.version);
+            const versionUrl = 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/version.json?t=' + Math.floor(Date.now()/60000);
+            
+            const response = await fetch(versionUrl);
+            if (!response.ok) throw new Error(`HTTP错误: ${response.status}`);
+            
+            const versionInfo = await response.json();
+            const remoteVersion = parseFloat(versionInfo.version);
+            
+            return {
+                hasUpdate: remoteVersion > currentVersion,
+                currentVersion,
+                remoteVersion,
+                updateUrl: versionInfo.updateUrl
+            };
+        } catch (error) {
+            console.error('检查管理器更新失败:', error);
+            return { hasUpdate: false };
+        }
+    }
+
     // 创建图标按钮
     function createIconButton(icon) {
         const btn = document.createElement('div');
@@ -267,7 +324,8 @@
     function createModuleCard(module) {
         const isInstalled = state.installedModules[module.id];
         const isEnabled = isInstalled ? isInstalled.enabled : false;
-        
+        const hasUpdate = module.hasUpdate || false;
+
         const card = document.createElement('div');
         Object.assign(card.style, {
             background: '#f8fafc',
@@ -299,9 +357,11 @@
         title.style.margin = '0';
         
         const status = document.createElement('span');
-        status.textContent = isInstalled 
-            ? (isEnabled ? '已启用' : '已禁用') 
-            : '未安装';
+        status.textContent = isInstalled ? 
+            (isEnabled ? '已启用' : '已禁用') + 
+            (hasUpdate ? ' (可更新)' : '') : 
+            '未安装';
+        
         status.style.cssText = `
             padding: 4px 8px;
             border-radius: 4px;
@@ -310,8 +370,12 @@
         `;
         
         if (isInstalled) {
-            status.style.backgroundColor = isEnabled ? '#4CAF5033' : '#F4433633';
-            status.style.color = isEnabled ? '#4CAF50' : '#F44336';
+            status.style.backgroundColor = isEnabled ? 
+                (hasUpdate ? '#FF980033' : '#4CAF5033') : 
+                '#F4433633';
+            status.style.color = isEnabled ? 
+                (hasUpdate ? '#FF9800' : '#4CAF50') : 
+                '#F44336';
         } else {
             status.style.backgroundColor = '#2196F333';
             status.style.color = '#2196F3';
@@ -380,22 +444,24 @@
             toggleBtn.disabled = true;
         }
         
-        // 检查更新按钮
+        // 更新按钮
         const updateBtn = document.createElement('button');
-        updateBtn.textContent = '检查更新';
+        updateBtn.textContent = hasUpdate ? '点击更新' : '无更新';
         updateBtn.style.cssText = `
             flex: 1;
             padding: 6px 12px;
             border: none;
             border-radius: 4px;
-            cursor: pointer;
+            cursor: ${hasUpdate ? 'pointer' : 'default'};
             font-weight: bold;
             transition: background-color 0.2s;
-            background-color: #2196F3;
+            background-color: ${hasUpdate ? '#FF9800' : '#9E9E9E'};
             color: white;
         `;
         
-        updateBtn.onclick = () => checkModuleUpdate(module);
+        if (hasUpdate) {
+            updateBtn.onclick = () => installModule(module);
+        }
         
         actions.appendChild(installBtn);
         actions.appendChild(toggleBtn);
@@ -414,6 +480,24 @@
         card.appendChild(actions);
         
         return card;
+    }
+
+    function compareVersions(v1, v2) {
+        // 统一转为字符串并清理非数字字符
+        const cleanVersion = v => String(v).replace(/[^\d.]/g, '');
+        const version1 = cleanVersion(v1).split('.').map(Number);
+        const version2 = cleanVersion(v2).split('.').map(Number);
+
+        // 分段比较
+        const maxLength = Math.max(version1.length, version2.length);
+        for (let i = 0; i < maxLength; i++) {
+            const num1 = version1[i] || 0;
+            const num2 = version2[i] || 0;
+            if (num1 > num2) return 1;
+            if (num1 < num2) return -1;
+        }
+
+        return 0;
     }
 
     // 配置表单函数
@@ -479,19 +563,71 @@
     // 加载模块列表
     async function loadModuleList() {
         try {
-            const response = await fetch(CONFIG.moduleListUrl);
-            if (!response.ok) {
-                throw new Error(`HTTP错误，状态码: ${response.status}`);
+            const response = await fetch(CONFIG.getModuleListUrl());
+            if (!response.ok) throw new Error(`HTTP错误: ${response.status}`);
+            
+            const remoteModules = await response.json();
+            const installedIds = Object.keys(state.installedModules);
+
+            // 1. 检查下架模块
+            const deprecatedModules = installedIds.filter(id => 
+                !remoteModules.some(m => m.id === id)
+            );
+            
+            if (deprecatedModules.length > 0) {
+                handleDeprecatedModules(deprecatedModules);
             }
-            const modules = await response.json();
-            state.modules = modules;
-            return modules;
+
+            // 2. 为每个模块标记更新状态
+            remoteModules.forEach(module => {
+                const installedModule = state.installedModules[module.id];
+                module.hasUpdate = installedModule ? 
+                    (compareVersions(module.version, installedModule.version) > 0) : 
+                    false;
+                
+                // 保留原始安装状态
+                if (installedModule) {
+                    module.installed = true;
+                    module.enabled = installedModule.enabled;
+                }
+            });
+
+            // 3. 更新全局模块状态
+            state.modules = remoteModules;
+            return remoteModules;
+
         } catch (error) {
             console.error('加载模块列表失败:', error);
-            throw error;
+            showNotification('无法获取模块列表，请检查网络', 'error');
+            // 返回缓存的模块列表（如果有）
+            return state.modules || [];
         }
     }
     
+    // 下架模块处理器
+    function handleDeprecatedModules(moduleIds) {
+        const SILENT_MODE = GM_getValue('silent_mode', false);
+        
+        if (!SILENT_MODE) {
+            showNotification(
+                `发现 ${moduleIds.length} 个已下架模块，正在清理...`,
+                'warning'
+            );
+        }
+
+        moduleIds.forEach(id => {
+            const moduleName = state.installedModules[id]?.name || id;
+            console.log(`[自动清理] 移除下架模块: ${moduleName}`);
+            GM_deleteValue(`module_${id}`);
+            
+            // 可选：备份配置
+            if (GM_getValue('backup_enabled', false)) {
+                const backup = JSON.stringify(state.installedModules[id]);
+                GM_setValue(`backup_${id}`, backup);
+            }
+        });
+    }
+
     // 安装模块
     async function installModule(module) {
         try {
