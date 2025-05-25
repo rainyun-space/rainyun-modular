@@ -11,7 +11,7 @@
     }
 
     function initModule() {
-        const config = window.RainyunModularConfig?.beautify || { enabled: true, config: {} };
+        const config = window.RainyunModularConfig?.['custom-background'] || { enabled: true, config: {} };
         if (!config.enabled) return;
 
         // 应用背景
