@@ -59,4 +59,6 @@
     } else {
         setTimeout(initModule, 100);
     }
+
+    console.log('[自定义字体] 模块已启动');
 })();
