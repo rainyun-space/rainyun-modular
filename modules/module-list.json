@@ -19,9 +19,9 @@
     "id": "custom-background",
     "name": "自定义背景",
     "description": "自定义控制台背景图片",
-    "version": "0.3",
+    "version": "0.4",
     "path": "custom-background",
-    "script": "0.3.user.js",
+    "script": "0.4.user.js",
     "configSchema": [
       {
         "key": "background",
