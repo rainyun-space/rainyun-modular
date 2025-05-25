@@ -19,9 +19,9 @@
     "id": "custom-background",
     "name": "自定义背景",
     "description": "自定义控制台背景图片",
-    "version": "0.2",
+    "version": "0.3",
     "path": "custom-background",
-    "script": "0.2.user.js",
+    "script": "0.3.user.js",
     "configSchema": [
       {
         "key": "background",
@@ -34,7 +34,7 @@
   {
     "id": "custom-font",
     "name": "自定义字体",
-    "description": "安全修改页面显示字体",
+    "description": "自定义控制台字体",
     "version": "0.2",
     "path": "custom-font",
     "script": "0.2.user.js",
@@ -42,7 +42,7 @@
       {
         "key": "font",
         "type": "text",
-        "label": "选择字体",
+        "label": "字体",
         "default": "楷体"
       }
     ]
@@ -70,5 +70,13 @@
     "version": "0.3",
     "path": "no-watermark",
     "script": "0.3.user.js"
+  },
+  {
+    "id": "max-points",
+    "name": "最大积分填充",
+    "description": "积分提现时自动填充最大可用积分",
+    "version": "0.1",
+    "path": "max-points",
+    "script": "0.1.user.js"
   }
 ]
