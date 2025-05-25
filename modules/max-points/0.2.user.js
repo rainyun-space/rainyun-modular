@@ -82,6 +82,7 @@
     // 显示提示信息
     function showToast(message, type = 'info') {
         const toast = document.createElement('div');
+        toast.className = 'custom-toast'; // 添加特定类名
         toast.style = `
             position: fixed;
             top: 20px;
@@ -92,13 +93,12 @@
             border-radius: 4px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             z-index: 9999;
-            animation: slideIn 0.3s ease-out;
         `;
         toast.textContent = message;
 
         document.body.appendChild(toast);
         setTimeout(() => {
-            toast.style.animation = 'fadeOut 0.3s ease-out';
+            toast.classList.add('fade-out');
             setTimeout(() => toast.remove(), 300);
         }, 3000);
     }
@@ -134,9 +134,15 @@
     // 添加CSS动画
     const style = document.createElement('style');
     style.textContent = `
+        .custom-toast {
+            animation: slideIn 0.3s ease-out;
+        }
         @keyframes slideIn {
             from { transform: translateX(100%); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
+        }
+        .fade-out {
+            animation: fadeOut 0.3s ease-out;
         }
         @keyframes fadeOut {
             from { opacity: 1; }

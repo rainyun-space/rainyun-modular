@@ -75,8 +75,8 @@
     "id": "max-points",
     "name": "最大积分填充",
     "description": "积分提现时自动填充最大可用积分",
-    "version": "0.1",
+    "version": "0.2",
     "path": "max-points",
-    "script": "0.1.user.js"
+    "script": "0.2.user.js"
   }
 ]
