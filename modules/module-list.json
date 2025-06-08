@@ -3,9 +3,9 @@
     "id": "privacy-protection",
     "name": "隐私保护",
     "description": "给包含特定隐私内容的元素持续添加模糊效果，并提供可拖动悬浮按钮控制，适用于截图/录屏等多个场景",
-    "version": "0.16",
+    "version": "0.17",
     "path": "privacy-protection",
-    "script": "0.16.user.js"
+    "script": "0.17.user.js"
   },
   {
     "id": "mcsm-new-tab",

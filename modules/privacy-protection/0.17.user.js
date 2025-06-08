@@ -1,33 +1,35 @@
 (function() {
     'use strict';
 
-    // 修改配置获取方式
-    const moduleConfig = window.RainyunModularConfig 
-        ? window.RainyunModularConfig['privacy-protection'] || {}
-        : {};
-
-    // 使用配置中的启用状态
-    var privacyProtectionEnabled = (moduleConfig.enabled !== undefined && moduleConfig.enabled) 
-        ? false  // 即使模块已启用，仍然默认关闭功能
-        : false; // 双重确认默认关闭
+    var privacyProtectionEnabled = false;
 
     // 敏感关键词列表
     const keywordsForH4 = [
-        '公网IP列表', '面板用户名', 'CDN设置', '发票抬头列表', '我的发票', '发起提现',
-        '域名管理', '我的模板', 'NAT端口映射管理', 'Nat端口映射', '绑定支付宝', '绑定邮箱',
-        '账号变动日志', 'API秘钥', 'IP列表'
+        '面板用户名', 'CDN设置', '发票抬头列表', '我的发票',
+        '域名管理', '我的模板', '绑定支付宝', '绑定邮箱', '绑定手机',
+        '账号变动日志', 'API密钥', 'IP列表'
     ];
 
     const keywordsForH5 = [
         'IP 地址管理'
     ];
 
-    const keywordsForTable = ['日志ID', 'CNAME', '桶名', '服务名称'];
+    // 旧表格打码关键词
+    const keywordsForTable = ['CNAME', '桶名', '服务名称'];
 
-    const keywordsForP = ['公网IP', '服务器ID', '标签:'];
+    const keywordsForP = ['公网IP', '服务器ID', '标签'];
 
     const smallKeywordsForTD = [
         '公网 IP 地址：', '公网IP地址：', '内网IP：', '远程连接地址 (RDP/SSH)：', '面板主账户：', '安装结果输出', 'IPv4公网地址'
+    ];
+
+    // 特殊表格处理配置：表头文本 -> 需要模糊的列索引
+    const specialTableConfigs = [
+        { header: '提现账户', columnIndex: 2 },
+        { header: '信息', columnIndex: 3 },
+        { header: '映射公网地址', columnIndex: 3 },
+        { header: '对外地址:端口', columnIndex: 0 },
+        { header: 'IP地址', columnIndex: 0 }
     ];
 
     // SVG icons for normal and slashed-eye states
@@ -48,7 +50,7 @@
     // Create and style the toggle button
     function createToggleButton() {
         const button = document.createElement('div');
-        button.innerHTML = privacyProtectionEnabled ? slashedEyeIcon : normalEyeIcon;
+        button.innerHTML = normalEyeIcon; // Set the initial icon to the normal eye
 
         button.style.position = 'fixed';
         button.style.bottom = '20px';
@@ -115,21 +117,12 @@
 
     function togglePrivacyProtection() {
         privacyProtectionEnabled = !privacyProtectionEnabled;
-        
-        // 更新模块配置
-        if (window.RainyunModularConfig) {
-            window.RainyunModularConfig['privacy-protection'] = {
-                ...(window.RainyunModularConfig['privacy-protection'] || {}),
-                enabled: privacyProtectionEnabled
-            };
-        }
-        
         if (privacyProtectionEnabled) {
             applyPrivacyProtection();
-            toggleButton.innerHTML = slashedEyeIcon;
+            toggleButton.innerHTML = slashedEyeIcon; // Change to slashed-eye icon
         } else {
             removePrivacyProtection();
-            toggleButton.innerHTML = normalEyeIcon;
+            toggleButton.innerHTML = normalEyeIcon; // Change back to normal eye icon
         }
     }
 
@@ -147,7 +140,45 @@
         subtree: true
     });
 
+    // 特殊表格列模糊处理
+    function applySpecialTableBlurring() {
+        document.querySelectorAll('table').forEach(table => {
+            // 查找表头行
+            const headerRow = table.querySelector('thead tr') || table.querySelector('tr:first-child');
+            if (!headerRow) return;
+
+            const headerCells = headerRow.querySelectorAll('th, td');
+
+            // 检查每个预设配置
+            specialTableConfigs.forEach(config => {
+                let targetColumnIndex = -1;
+
+                // 查找匹配的表头
+                headerCells.forEach((cell, index) => {
+                    if (cell.textContent.trim().includes(config.header)) {
+                        targetColumnIndex = config.columnIndex;
+                    }
+                });
+
+                // 模糊整列
+                if (targetColumnIndex !== -1) {
+                    // 选择所有行（包括表头）
+                    const rows = table.querySelectorAll('tr');
+                    rows.forEach(row => {
+                        // 获取当前行的所有单元格（包括 th 和 td）
+                        const cells = row.querySelectorAll('th, td');
+                        if (cells.length > targetColumnIndex) {
+                            const targetCell = cells[targetColumnIndex];
+                            targetCell.style.filter = 'blur(5px)';
+                        }
+                    });
+                }
+            });
+        });
+    }
+
     function applyPrivacyProtection() {
+        // 原有元素模糊处理
         var h4Elements = document.querySelectorAll('h4');
         h4Elements.forEach(h4Element => {
             if (keywordsForH4.some(keyword => h4Element.textContent.includes(keyword))) {
@@ -168,6 +199,7 @@
             }
         });
 
+        // 旧表格打码功能（整个表格父级模糊）
         var tableElements = document.querySelectorAll('table');
         tableElements.forEach(tableElement => {
             if (keywordsForTable.some(keyword => tableElement.textContent.includes(keyword))) {
@@ -189,19 +221,33 @@
                 }
             }
         });
+
+        // 新增特殊表格列模糊
+        applySpecialTableBlurring();
     }
 
     function removePrivacyProtection() {
+        // 移除原有元素模糊
         var elements = document.querySelectorAll('p, td, div');
         elements.forEach(element => {
             element.style.filter = 'none';
         });
+
+        // 移除表格列模糊
+        document.querySelectorAll('td').forEach(td => {
+            td.style.filter = 'none';
+        });
+
+        // 移除表格头模糊
+        document.querySelectorAll('th').forEach(th => {
+            th.style.filter = 'none';
+        });
+
+        // 移除旧表格父级div模糊
+        document.querySelectorAll('div').forEach(div => {
+            div.style.filter = 'none';
+        });
     }
-    
-    // 初始化
-    if (privacyProtectionEnabled) {
-        applyPrivacyProtection();
-    }
-    
+
     console.log('[隐私保护] 模块已启动');
-})();  
+})();
