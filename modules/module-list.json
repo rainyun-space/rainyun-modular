@@ -10,7 +10,7 @@
   {
     "id": "mcsm-new-tab",
     "name": "MCSM新标签页打开",
-    "description": "将MCSM一键登录从弹窗打开改为新标签页打开",
+    "description": "将MCSM一键登录从弹窗打开改为新标‎签页打开",
     "version": "0.1",
     "path": "mcsm-new-tab",
     "script": "0.1.user.js"
