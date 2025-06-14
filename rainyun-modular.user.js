@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.4.1
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -168,7 +168,7 @@
             left: '-24px',
             top: '50%',
             transform: 'translateY(-50%)',
-            zIndex: '9998',
+            zIndex: '10000', // 高于弹窗
             transition: 'all 0.3s ease',
             padding: '20px', // 扩大悬浮检测区
             margin: '-20px'  // 抵消padding对位置的影响
@@ -200,21 +200,41 @@
         }
 
         // 创建主容器
-        managerUI = document.createElement('div');
-        Object.assign(managerUI.style, {
-            position: 'fixed',
-            left: '80px', // 距离左侧距离
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '360px',
-            maxHeight: '80vh',
-            backgroundColor: STYLE_CONFIG.backgroundColor,
-            borderRadius: STYLE_CONFIG.borderRadius,
-            boxShadow: STYLE_CONFIG.boxShadow,
-            zIndex: '9999',
-            opacity: '0',
-            transition: 'opacity 0.3s ease, transform 0.3s ease'
-        });
+        // 自适应检测
+        if (window.innerWidth < 768) {
+            managerUI = document.createElement('div');
+            Object.assign(managerUI.style, {
+                position: 'fixed',
+                left: '0', // 距离左侧距离
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '100%',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease'
+            });
+        } else {
+            managerUI = document.createElement('div');
+            Object.assign(managerUI.style, {
+                position: 'fixed',
+                left: '80px', // 距离左侧距离
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '360px',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease'
+            });
+        }
+        
 
         // 头部
         const header = document.createElement('div');
@@ -340,22 +360,42 @@
             return;
         }
 
-        settingsUI = document.createElement('div');
-        Object.assign(settingsUI.style, {
-            position: 'fixed',
-            left: 'calc(80px + 380px)', // 在管理器右侧
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '300px',
-            maxHeight: '80vh',
-            backgroundColor: STYLE_CONFIG.backgroundColor,
-            borderRadius: STYLE_CONFIG.borderRadius,
-            boxShadow: STYLE_CONFIG.boxShadow,
-            zIndex: '9999',
-            opacity: '0',
-            transition: 'opacity 0.3s ease, transform 0.3s ease',
-            padding: '20px'
-        });
+        // 自适应检测
+        if (window.innerWidth < 768) {
+            settingsUI = document.createElement('div');
+            Object.assign(settingsUI.style, {
+                position: 'fixed',
+                left: '0', // 最左侧
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '100%',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                padding: '20px'
+            });
+        } else {
+            settingsUI = document.createElement('div');
+            Object.assign(settingsUI.style, {
+                position: 'fixed',
+                left: 'calc(80px + 380px)', // 在管理器右侧
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '300px',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                padding: '20px'
+            });
+        }
 
         // 头部
         const header = document.createElement('div');
