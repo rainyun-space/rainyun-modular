@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.4
+// @version      1.5
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -17,7 +17,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @connect      github.com
-// @connect      rljh0nlm.cn-nb1.rainapp.top
+// @connect      rainyun-modular.zzwl.top
 // ==/UserScript==
 
 (function() {
@@ -32,9 +32,9 @@
                 baseUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/'
             },
             Rainapp: {
-                baseModuleListUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/modules/module-list.json',
-                baseVersionUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/version.json',
-                baseUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/modules/'
+                baseModuleListUrl: 'https://rainyun-modular.zzwl.top/modules/module-list.json',
+                baseVersionUrl: 'https://rainyun-modular.zzwl.top/version.json',
+                baseUrl: 'https://rainyun-modular.zzwl.top/modules/'
             }
         },
         getModuleListUrl: function() {
@@ -46,8 +46,8 @@
             return `${source.baseUrl}${path}/${script}?t=${Math.floor(Date.now()/60000)}`;
         },
         getCurrentSource: function() {
-            const sourceName = GM_getValue('source_name', 'Github');
-            return this.sources[sourceName] || this.sources['Github'];
+            const sourceName = GM_getValue('source_name', 'Rainapp');
+            return this.sources[sourceName] || this.sources['Rainapp'];
         },
         updateCheckInterval: 24 * 60 * 60 * 1000
     };
@@ -168,7 +168,7 @@
             left: '-24px',
             top: '50%',
             transform: 'translateY(-50%)',
-            zIndex: '9998',
+            zIndex: '10000', // 高于弹窗
             transition: 'all 0.3s ease',
             padding: '20px', // 扩大悬浮检测区
             margin: '-20px'  // 抵消padding对位置的影响
@@ -200,21 +200,41 @@
         }
 
         // 创建主容器
-        managerUI = document.createElement('div');
-        Object.assign(managerUI.style, {
-            position: 'fixed',
-            left: '80px', // 距离左侧距离
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '360px',
-            maxHeight: '80vh',
-            backgroundColor: STYLE_CONFIG.backgroundColor,
-            borderRadius: STYLE_CONFIG.borderRadius,
-            boxShadow: STYLE_CONFIG.boxShadow,
-            zIndex: '9999',
-            opacity: '0',
-            transition: 'opacity 0.3s ease, transform 0.3s ease'
-        });
+        // 自适应检测
+        if (window.innerWidth < 768) {
+            managerUI = document.createElement('div');
+            Object.assign(managerUI.style, {
+                position: 'fixed',
+                left: '0', // 距离左侧距离
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '100%',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease'
+            });
+        } else {
+            managerUI = document.createElement('div');
+            Object.assign(managerUI.style, {
+                position: 'fixed',
+                left: '80px', // 距离左侧距离
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '360px',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease'
+            });
+        }
+        
 
         // 头部
         const header = document.createElement('div');
@@ -340,22 +360,42 @@
             return;
         }
 
-        settingsUI = document.createElement('div');
-        Object.assign(settingsUI.style, {
-            position: 'fixed',
-            left: 'calc(80px + 380px)', // 在管理器右侧
-            top: '50%',
-            transform: 'translateY(-50%)',
-            width: '300px',
-            maxHeight: '80vh',
-            backgroundColor: STYLE_CONFIG.backgroundColor,
-            borderRadius: STYLE_CONFIG.borderRadius,
-            boxShadow: STYLE_CONFIG.boxShadow,
-            zIndex: '9999',
-            opacity: '0',
-            transition: 'opacity 0.3s ease, transform 0.3s ease',
-            padding: '20px'
-        });
+        // 自适应检测
+        if (window.innerWidth < 768) {
+            settingsUI = document.createElement('div');
+            Object.assign(settingsUI.style, {
+                position: 'fixed',
+                left: '0', // 最左侧
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '100%',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                padding: '20px'
+            });
+        } else {
+            settingsUI = document.createElement('div');
+            Object.assign(settingsUI.style, {
+                position: 'fixed',
+                left: 'calc(80px + 380px)', // 在管理器右侧
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '300px',
+                maxHeight: '80vh',
+                backgroundColor: STYLE_CONFIG.backgroundColor,
+                borderRadius: STYLE_CONFIG.borderRadius,
+                boxShadow: STYLE_CONFIG.boxShadow,
+                zIndex: '9999',
+                opacity: '0',
+                transition: 'opacity 0.3s ease, transform 0.3s ease',
+                padding: '20px'
+            });
+        }
 
         // 头部
         const header = document.createElement('div');
@@ -406,7 +446,7 @@
         sourceSelect.style.borderRadius = '4px';
         sourceSelect.style.border = `1px solid ${STYLE_CONFIG.primaryColor}33`;
 
-        const currentSource = GM_getValue('source_name', 'Github');
+        const currentSource = GM_getValue('source_name', 'Rainapp');
 
         Object.keys(CONFIG.sources).forEach(sourceName => {
             const option = document.createElement('option');
