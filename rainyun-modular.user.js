@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         雨云控制台模块管理器
 // @namespace    http://tampermonkey.net/
-// @version      1.4.1
+// @version      1.5
 // @description  雨云控制台功能模块管理器，支持模块的安装、卸载、启用、禁用和更新
 // @author       ndxzzy, DeepSeek
 // @match        https://app.rainyun.com/*
@@ -17,7 +17,7 @@
 // @grant        GM_xmlhttpRequest
 // @grant        GM_addStyle
 // @connect      github.com
-// @connect      rljh0nlm.cn-nb1.rainapp.top
+// @connect      rainyun-modular.zzwl.top
 // ==/UserScript==
 
 (function() {
@@ -32,9 +32,9 @@
                 baseUrl: 'https://raw.githubusercontent.com/rainyun-space/rainyun-modular/main/modules/'
             },
             Rainapp: {
-                baseModuleListUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/modules/module-list.json',
-                baseVersionUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/version.json',
-                baseUrl: 'https://rljh0nlm.cn-nb1.rainapp.top/modules/'
+                baseModuleListUrl: 'https://rainyun-modular.zzwl.top/modules/module-list.json',
+                baseVersionUrl: 'https://rainyun-modular.zzwl.top/version.json',
+                baseUrl: 'https://rainyun-modular.zzwl.top/modules/'
             }
         },
         getModuleListUrl: function() {
@@ -46,8 +46,8 @@
             return `${source.baseUrl}${path}/${script}?t=${Math.floor(Date.now()/60000)}`;
         },
         getCurrentSource: function() {
-            const sourceName = GM_getValue('source_name', 'Github');
-            return this.sources[sourceName] || this.sources['Github'];
+            const sourceName = GM_getValue('source_name', 'Rainapp');
+            return this.sources[sourceName] || this.sources['Rainapp'];
         },
         updateCheckInterval: 24 * 60 * 60 * 1000
     };
@@ -446,7 +446,7 @@
         sourceSelect.style.borderRadius = '4px';
         sourceSelect.style.border = `1px solid ${STYLE_CONFIG.primaryColor}33`;
 
-        const currentSource = GM_getValue('source_name', 'Github');
+        const currentSource = GM_getValue('source_name', 'Rainapp');
 
         Object.keys(CONFIG.sources).forEach(sourceName => {
             const option = document.createElement('option');
