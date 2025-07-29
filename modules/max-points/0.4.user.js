@@ -46,18 +46,24 @@
                 if (!cookieData) throw new Error('未找到用户数据');
 
                 const userData = JSON.parse(decodeURIComponent(cookieData[1]));
-                const maxPoints = userData.Points - (userData.LockPoints || 0);
+                // 计算可用积分（总积分 - 锁定积分）
+                const availablePoints = userData.Points - (userData.LockPoints || 0);
+                
+                // 计算最大可提现积分：考虑1%手续费后不超过可用积分
+                // 公式：提现金额 + 提现金额×1% ≤ 可用积分 → 提现金额 ≤ 可用积分 ÷ 1.01
+                const maxWithdraw = Math.floor(availablePoints / 1.01);
 
-                if (maxPoints < 60000) {
-                    showToast('最低提现额度为60000积分', 'warning');
+                // 检查是否达到最低提现额度（最低60000是指用户输入的提现额）
+                if (maxWithdraw < 60000) {
+                    showToast('最低提现额度为60000积分（未含1%手续费）', 'warning');
                     return;
                 }
 
-                input.value = maxPoints;
+                input.value = maxWithdraw;
                 // 触发Vue数据更新
                 const event = new Event('input', { bubbles: true });
                 input.dispatchEvent(event);
-                showToast(`已填充最大可用积分：${maxPoints}`, 'success');
+                showToast(`已填充最大可提现积分：${maxWithdraw}（含手续费后将扣除${Math.ceil(maxWithdraw * 1.01)}）`, 'success');
             } catch (e) {
                 showToast('获取积分数据失败，请刷新页面', 'error');
                 console.error(e);
