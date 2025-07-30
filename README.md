@@ -15,6 +15,7 @@
 ### 安装步骤
 1. **安装管理器脚本**
    - 需要 Tampermonkey 扩展
+   - 需要开启浏览器拓展程序开发者模式
    - [点击安装管理器脚本](https://github.com/rainyun-space/rainyun-modular/raw/main/rainyun-modular.user.js)
 
 2. **安装功能模块**
@@ -23,7 +24,12 @@
    - 支持模块: 
      - 截图隐私保护
      - MCSM新标签页打开 
-     - 界面美化
+     - 自定义背景
+     - 自定义字体
+     - 个人信息展示
+     - 深色模式
+     - 水印清除
+     - 最大积分填充
      - [更多模块开发中...]
 
 ### 使用说明
@@ -44,7 +50,6 @@
 ```
 modules/
   [module-id]/
-    module-icon.png    // 可选图标
     [module-id].user.js
 ```
 
@@ -100,7 +105,6 @@ modules/
 - DOM操作需考虑动态加载内容
 - 外部依赖需动态加载
 - 配置访问使用`window.RainyunModularConfig`
-- 确保禁用时能完全清理
 
 ### 模块发布流程
 1. 开发完成后提交Pull Request
