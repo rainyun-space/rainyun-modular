@@ -40,15 +40,20 @@
         btn.style.cssText = 'white-space: nowrap; transition: all 0.3s;';
 
         // 添加点击事件
-        btn.addEventListener('click', () => {
+        btn.addEventListener('click', async () => {
             try {
-                const cookieData = document.cookie.match(/user-data=([^;]+)/);
-                if (!cookieData) throw new Error('未找到用户数据');
+                // 通过 API 获取用户数据
+                const resp = await fetch('https://api.v2.rainyun.com/user/?no_cache=true', {
+                    credentials: 'include'
+                });
+                if (!resp.ok) throw new Error('接口请求失败');
+                const result = await resp.json();
+                if (result.code !== 200 || !result.data) throw new Error('接口返回异常');
 
-                const userData = JSON.parse(decodeURIComponent(cookieData[1]));
+                const userData = result.data;
                 // 计算可用积分（总积分 - 锁定积分）
                 const availablePoints = userData.Points - (userData.LockPoints || 0);
-                
+
                 // 计算最大可提现积分：考虑1%手续费后不超过可用积分
                 // 公式：提现金额 + 提现金额×1% ≤ 可用积分 → 提现金额 ≤ 可用积分 ÷ 1.01
                 const maxWithdraw = Math.floor(availablePoints / 1.01);

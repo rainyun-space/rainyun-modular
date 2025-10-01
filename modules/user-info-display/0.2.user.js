@@ -103,13 +103,16 @@
         }
     }
 
-    // 注入信息表格
-    function injectInfoTable() {
-        const cookieData = document.cookie.match(/user-data=([^;]+)/);
-        if (!cookieData) return;
-
+    // 注入信息表格（改为API获取）
+    async function injectInfoTable() {
         try {
-            const userData = JSON.parse(decodeURIComponent(cookieData[1]));
+            const response = await fetch('https://api.v2.rainyun.com/user/?no_cache=true', {
+                credentials: 'include'
+            });
+            const result = await response.json();
+            if (result.code !== 200 || !result.data) return;
+
+            const userData = result.data;
             const table = createInfoTable(userData);
 
             // 创建折叠面板容器

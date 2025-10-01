@@ -51,9 +51,9 @@
     "id": "user-info-display",
     "name": "个人信息展示",
     "description": "在设置页面显示完整的个人信息",
-    "version": "0.1",
+    "version": "0.2",
     "path": "user-info-display",
-    "script": "0.1.user.js"
+    "script": "0.2.user.js"
   },
   {
     "id": "dark-mode",
@@ -75,8 +75,8 @@
     "id": "max-points",
     "name": "最大积分填充",
     "description": "积分提现时自动填充最大可用积分",
-    "version": "0.4",
+    "version": "0.5",
     "path": "max-points",
-    "script": "0.4.user.js"
+    "script": "0.5.user.js"
   }
 ]
