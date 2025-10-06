@@ -54,13 +54,25 @@
                 // 计算可用积分（总积分 - 锁定积分）
                 const availablePoints = userData.Points - (userData.LockPoints || 0);
 
-                // 计算最大可提现积分：考虑1%手续费后不超过可用积分
-                // 公式：提现金额 + 提现金额×1% ≤ 可用积分 → 提现金额 ≤ 可用积分 ÷ 1.01
-                const maxWithdraw = Math.floor(availablePoints / 1.01);
+                // 判断提现方式
+                let feeRate = 0;
+                const alipayRadio = document.querySelector('input[type="radio"][value="alipay"]');
+                if (alipayRadio && alipayRadio.checked) {
+                    feeRate = 0.01; // 支付宝提现有1%手续费
+                }
+
+                // 计算最大可提现积分
+                let maxWithdraw;
+                if (feeRate > 0) {
+                    // 公式：提现金额 + 提现金额×手续费 ≤ 可用积分 → 提现金额 ≤ 可用积分 ÷ (1 + feeRate)
+                    maxWithdraw = Math.floor(availablePoints / (1 + feeRate));
+                } else {
+                    maxWithdraw = availablePoints;
+                }
 
                 // 检查是否达到最低提现额度（最低60000是指用户输入的提现额）
                 if (maxWithdraw < 60000) {
-                    showToast('最低提现额度为60000积分（未含1%手续费）', 'warning');
+                    showToast('最低提现额度为60000积分（未含手续费）', 'warning');
                     return;
                 }
 
@@ -68,7 +80,12 @@
                 // 触发Vue数据更新
                 const event = new Event('input', { bubbles: true });
                 input.dispatchEvent(event);
-                showToast(`已填充最大可提现积分：${maxWithdraw}（含手续费后将扣除${Math.ceil(maxWithdraw * 1.01)}）`, 'success');
+
+                if (feeRate > 0) {
+                    showToast(`已填充最大可提现积分：${maxWithdraw}（含手续费后将扣除${Math.ceil(maxWithdraw * (1 + feeRate))}）`, 'success');
+                } else {
+                    showToast(`已填充最大可提现积分：${maxWithdraw}（余额提现无手续费）`, 'success');
+                }
             } catch (e) {
                 showToast('获取积分数据失败，请刷新页面', 'error');
                 console.error(e);
